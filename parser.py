@@ -14,21 +14,16 @@ url_page = "http://nnov.am.ru/all/search/?p="
 
 
 def get_count_pages(url):
-    pages = db.pages.find_one()
-    if pages is None:
-        html_doc = urlopen(url).read()
-        soup = BeautifulSoup(html_doc)
+    """Возвращает количество страниц"""
 
-        count_pages = soup.find("div", class_="paginator-amount").get_text()
-        count = count_pages.split()
-        pages = count[3]
+    html_doc = urlopen(url).read()
+    soup = BeautifulSoup(html_doc)
 
-        db.pages.remove()
-        db.pages.save({"count": pages})
+    count_pages = soup.find("div", class_="paginator-amount").get_text()
+    count = count_pages.split()
+    pages = count[3]
 
-        return pages
-    else:
-        return pages["count"]
+    return pages
 
 
 def parse_page(url_page):
@@ -50,15 +45,41 @@ def parse_pages(count_pages):
         parse_page(page)
 
 
-def parse_advert(url_advert):
+def parse_advert_page(url_advert):
     for advert in adverts:
         print advert["advert_url"]
 
-# db.pages.remove()
-# db.am_ru.remove()
-# pages = get_count_pages(url)
-# print pages
-# parse_pages(pages)
+
+db.pages.remove()
+db.am_ru.remove()
+pages = get_count_pages(url)
+print pages
+parse_pages(pages)
+count_adverts = db.am_ru.find().count()
+print count_adverts
+
+for advert in db.am_ru.find():
+    url = advert.get("advert_url")
+    id = advert.get("_id")
+
+    html_doc = urlopen(url).read()
+    soup = BeautifulSoup(html_doc)
+
+    images = []
+    ul = soup.find_all("li", class_="b-rama-thumbs__item")
+    if ul != []:
+        for li in ul:
+            image = li.a["data-original"]
+            images.append(image)
+            db.am_ru.update({"objectId: id"}, {"advert_images": images})
+            # fileimage = urlopen(image).read()
+            # f = open(str(image[-36:]), "wb")
+            # print str(image[-36:])
+            # f.write(fileimage)
+            # f.close
+
+
+    #db.am_ru.insert({"advert_photos": images})
 
 # for advert in db.am_ru.find():
 #     print advert.get("advert_url")
@@ -77,28 +98,27 @@ def parse_advert(url_advert):
 #
 #     time.sleep(300)
 
-html_doc = urlopen("http://nnov.am.ru/used/hyundai/ix35/avs-avtoregion-nn--9fa3edb9/#snp3").read()
-soup = BeautifulSoup(html_doc)
-
-images = []
-ul = soup.find_all("li", class_="b-rama-thumbs__item")
-for li in ul:
-    images.append(li.a["data-original"])
-
-ii = 0
-for image in images:
-    fileimage = urlopen(image).read()
-    f = open(str(ii)+".jpg", "wb")
-    f.write(fileimage)
-    f.close
-    print image
-    img = Image.open(str(ii)+".jpg")
-    width, height = img.size
-    left = 0
-    top = 0
-    right = width
-    bottom = height - 100
-    img2 = img.crop([left, top, right, bottom])
-    img2.load()
-    img2.save(str(ii)+"-crop.jpg")
-    ii += 1
+# html_doc = urlopen("http://nnov.am.ru/used/hyundai/ix35/avs-avtoregion-nn--9fa3edb9/#snp3").read()
+# soup = BeautifulSoup(html_doc)
+#
+# images = []
+# ul = soup.find_all("li", class_="b-rama-thumbs__item")
+# for li in ul:
+#     images.append(li.a["data-original"])
+#
+# ii = 0
+# for image in images:
+#     # fileimage = urlopen(image).read()
+#     # f = open(str(ii)+".jpg", "wb")
+#     # f.write(fileimage)
+#     # f.close
+#     # print image
+#     img = Image.open(str(ii)+".jpg")
+#     width, height = img.size
+#     left = 0
+#     top = 0
+#     right = width
+#     bottom = int(height) - 50
+#     img2 = img.crop((left, top, right, bottom))
+#     img2.save(str(ii)+"-crop.jpg", "JPEG", quality=100)
+#     ii += 1
