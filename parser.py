@@ -6,8 +6,9 @@ from bs4 import BeautifulSoup
 from urllib2 import urlopen
 from PIL import Image
 
+
 client = pymongo.MongoClient("localhost", 27017)
-db = client.parser
+db = client.adverts
 
 url = "http://nnov.am.ru/all/search/"
 url_page = "http://nnov.am.ru/all/search/?p="
@@ -34,12 +35,12 @@ def parse_page(url_page):
     for advert in adverts:
         advert_url = advert.a.get("href")
         print advert.a.get("href")
-        db.am_ru.insert({"advert_url": advert_url})
+        db.am.insert({"advert_url": advert_url})
 
 
 def parse_pages(count_pages):
     for i in xrange(0, int(count_pages)):
-        print i
+        print "Номер страницы:", i
         page = url_page + str(i)
         print page
         parse_page(page)
@@ -50,28 +51,32 @@ def parse_advert_page(url_advert):
         print advert["advert_url"]
 
 
-db.pages.remove()
-db.am_ru.remove()
-pages = get_count_pages(url)
-print pages
-parse_pages(pages)
-count_adverts = db.am_ru.find().count()
-print count_adverts
+# db.pages.remove()
+# db.amru.remove()
+# pages = get_count_pages(url)
+# print pages
+# parse_pages(pages)
+count_adverts = db.am.find().count()
+print "Количество объявлений: ", count_adverts
 
-for advert in db.am_ru.find():
+for advert in db.am.find().limit(1):
     url = advert.get("advert_url")
     id = advert.get("_id")
 
     html_doc = urlopen(url).read()
     soup = BeautifulSoup(html_doc)
 
-    images = []
-    ul = soup.find_all("li", class_="b-rama-thumbs__item")
-    if ul != []:
-        for li in ul:
-            image = li.a["data-original"]
-            images.append(image)
-            db.am_ru.update({"objectId: id"}, {"advert_images": images})
+    ul = soup.find("ul", class_="breadcrumbs")
+    brand = ul.li.a.span.string
+
+#
+#     images = []
+#     ul = soup.find_all("li", class_="b-rama-thumbs__item")
+#     if ul != []:
+#         for li in ul:
+#             image = li.a["data-original"]
+#             images.append(image)
+            #db.am_ru.update({"_id: id"}, {"advert_images": images})
             # fileimage = urlopen(image).read()
             # f = open(str(image[-36:]), "wb")
             # print str(image[-36:])
