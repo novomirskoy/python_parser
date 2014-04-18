@@ -6,8 +6,10 @@ import locale
 import re
 import base64
 import os
+import shutil
 import pyocr
 import pyocr.builders
+from urlparse import urlparse
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 from PIL import Image
@@ -97,15 +99,17 @@ def download_and_crop(image_url, id):
     """Скачивает изображение и обрезает по указанному размеру"""
 
     img = urlopen(image_url).read()
+
     img_file_name = "images/"+str(id)+"/"+image_url[-36:]
     img_file = open(img_file_name, "wb")
     img_file.write(img)
     img_file.flush()
     img_file.close()
+
     img_original = Image.open(img_file_name)
     width, height = img_original.size
     img_crop = img_original.crop([0, 0, width, height - 50])
-    img_crop.save(img_file_name)
+    img_crop.save(img_file_name, quality=100)
 
     return img_file_name
 
@@ -233,8 +237,16 @@ def parse_advert_page(advert):
                 except KeyError:
                     continue
                 else:
-                    image_file = download_and_crop(image, id)
-                    images.append(image_file)
+                    url_image = urlparse(image)
+                    url_path = url_image.path
+                    pattern = re.compile('^\/autocatalog')
+                    find = re.findall(pattern, url_path)
+
+                    if bool(find):
+                        break
+                    else:
+                        image_file = download_and_crop(image, id)
+                        images.append(image_file)
 
         advert["images"] = images
 
@@ -304,20 +316,24 @@ def parse_advert_page(advert):
     db.am.update({"advert_url": url}, {"$set": {"advert": json.dumps(advert)}})
 
 
+def remove_all_images():
+    if os.path.exists("images/"):
+        shutil.rmtree("images/")
+
+
 def main():
     action_type = None
     print "Список действий:"
     print "1 - удалить все имеющиеся объявления"
     print "2 - парсинг всех объявлений"
-    print "3 - удаление объявлений не соответсвующих требованиям"
-    print "4 - поиск изменений"
-    print "5 - выход из программы"
+    print "3 - выход из программы"
 
-    while action_type != 5:
+    while action_type != 3:
         action_type = int((raw_input("[]-> ")))
 
         if action_type == 1:
             db.am.remove()
+            remove_all_images()
         elif action_type == 2:
             number_of_pages = get_count_pages(url)
             print number_of_pages
@@ -325,19 +341,17 @@ def main():
             count_adverts = db.am.find().count()
             print "Количество объявлений: ", count_adverts
             counter = 1
+            if not os.path.exists("images"):
+                os.mkdir("images")
             for advert in db.am.find():
                 print "Номер объявления: ", counter
                 parse_advert_page(advert)
                 counter += 1
-        elif action_type == 3:
-            pass
-        elif action_type == 4:
-            pass
 
-
-    # for advert in db.am.find():
-    #     advert = json.loads(advert.get("advert"))
-    #     print advert.get("engine_power")
 
 if __name__ == "__main__":
     main()
+    # i = 1
+    # for advert in db.am.find():
+    #     print i
+    #     i += 1
