@@ -6,7 +6,9 @@ import locale
 import re
 import base64
 import os
+import sys
 import shutil
+import hashlib
 import pyocr
 import pyocr.builders
 from urlparse import urlparse
@@ -37,9 +39,30 @@ params = {
 }
 
 
-def get_count_pages(url):
-    """Возвращает количество страниц"""
+# Копирование дерева каталогов
+def copytree(src, dst, symlinks=0):
+    print "Копирование папки " + src
+    names = os.listdir(src)
+    if not os.path.exists(dst):
+        os.mkdir(dst)
+        os.chmod(dst, 0775)
+    for name in names:
+        src_name = os.path.join(src, name)
+        dst_name = os.path.join(dst, name)
+        try:
+            if symlinks and os.path.islink(src_name):
+                link_to = os.readlink(src_name)
+                os.symlink(link_to, dst_name)
+            elif os.path.isdir(src_name):
+                copytree(src_name, dst_name, symlinks)
+            else:
+                shutil.copy(src_name, dst_name)
+        except (IOError, os.error) as why:
+            print "Невозможно скопировать %s в %s: %s" % (src_name, dst_name, str(why))
 
+
+# Возвращает количество страниц
+def get_count_pages(url):
     html_doc = urlopen(url).read()
     soup = BeautifulSoup(html_doc)
 
@@ -50,12 +73,8 @@ def get_count_pages(url):
     return pages
 
 
+# Парсит страницу со списком объявлений и сохраняет их url
 def parse_page(url_page):
-    """
-    Парсит страницу со списком объявлений
-    и сохраняет их url
-    """
-
     html_doc = urlopen(url_page).read()
     soup = BeautifulSoup(html_doc)
 
@@ -63,7 +82,7 @@ def parse_page(url_page):
     for advert in adverts:
         advert_url = advert.a.get("href")
         print advert.a.get("href")
-        db.am.insert({"advert_url": advert_url})
+        db.am_ru_adverts.insert({"advert_url": advert_url})
 
 
 def parse_pages(count_pages):
@@ -83,9 +102,8 @@ def filter_string(string):
     return found[0]
 
 
+# Распознаёт изображение с номером телефона
 def recognition_phone(phone_img_file):
-    """Распознаёт изображение с номером телефона"""
-
     tools = pyocr.get_available_tools()
     tool = tools[0]
     langs = tool.get_available_languages()
@@ -95,21 +113,21 @@ def recognition_phone(phone_img_file):
     return phone_text
 
 
+# Скачивает изображение и обрезает на 50 пикселей снизу
 def download_and_crop(image_url, id):
-    """Скачивает изображение и обрезает по указанному размеру"""
-
     img = urlopen(image_url).read()
+    img_dir = "images/"
 
-    img_file_name = "images/"+str(id)+"/"+image_url[-36:]
-    img_file = open(img_file_name, "wb")
+    img_file_name = str(id)+"/"+image_url[-36:]
+    img_file = open(img_dir + img_file_name, "wb")
     img_file.write(img)
     img_file.flush()
     img_file.close()
 
-    img_original = Image.open(img_file_name)
+    img_original = Image.open(img_dir + img_file_name)
     width, height = img_original.size
     img_crop = img_original.crop([0, 0, width, height - 50])
-    img_crop.save(img_file_name, quality=100)
+    img_crop.save(img_dir + img_file_name, quality=100)
 
     return img_file_name
 
@@ -126,74 +144,107 @@ def parse_advert_page(advert):
 
     advert = {}
 
+    # Продавец и Регион и Место осмотра
+    contact_info = soup.find_all("dl", class_="clearfix")
+
     try:
-        brandTag = soup.find(attrs={"data-object": "brand"})
-        brand = brandTag.span.string
+        seller = contact_info[0].dd.get_text()
+    except IndexError:
+        advert["seller"] = ""
+    else:
+        advert["seller"] = seller[:-14]
+
+    # не будем парсить объявления с незаполненым полем "Имя владельца"
+    if len(advert["seller"]) == 0:
+        return False
+
+    try:
+        contact_info[1].dt.get_text()
+    except IndexError:
+        pass
+    else:
+        if (contact_info[1].dt.get_text()) == u'Адрес:':
+            try:
+                address = contact_info[1].dd.get_text()
+            except IndexError:
+                address = ""
+            else:
+                advert["region"] = address.split(",")[0]
+                inspection_place = address.strip()[:-10]
+                advert["inspection_place"] = inspection_place.strip()
+        else:
+            try:
+                region = contact_info[1].dd.get_text()
+            except IndexError:
+                advert["region"] = ""
+            else:
+                advert["region"] = region
+
+            if (contact_info[2].dt.get_text()) == u'Осмотр:':
+                try:
+                    inspection_place = contact_info[2].dd.get_text()
+                except IndexError:
+                    advert["inspection_place"] = ""
+                else:
+                    inspection_place = inspection_place.strip()[:-10]
+                    advert["inspection_place"] = inspection_place.strip()
+
+    # Изображения
+    images = []
+    images_ul = soup.find_all("li", class_="b-rama-thumbs__item")
+
+    if bool(images_ul) is not False:
+        if not os.path.exists("images/"+str(id)):
+            os.mkdir("images/"+str(id))
+
+        for li in images_ul:
+            try:
+                image = li.a["data-original"]
+            except KeyError:
+                continue
+            else:
+                url_image = urlparse(image)
+                url_path = url_image.path
+                pattern = re.compile('^\/autocatalog')
+                find = re.findall(pattern, url_path)
+
+                if bool(find):
+                    return False
+                else:
+                    image_file = download_and_crop(image, id)
+                    images.append(image_file)
+    else:
+        return False
+
+    advert["images"] = images
+
+    try:
+        brand_tag = soup.find(attrs={"data-object": "brand"})
+        brand = brand_tag.span.string
     except AttributeError:
         pass
     else:
-        """Марка"""
-        brandTag = soup.find(attrs={"data-object": "brand"})
-        brand = brandTag.span.string
+        # Марка
+        brand_tag = soup.find(attrs={"data-object": "brand"})
+        brand = brand_tag.span.string
         advert["brand"] = brand
 
-        """Модель"""
-        modelTag = soup.find(attrs={"data-object": "model"})
-        model = modelTag.span.string
+        # Модель
+        model_tag = soup.find(attrs={"data-object": "model"})
+        model = model_tag.span.string
         advert["model"] = model
 
-        """Год"""
-        yearTag = soup.find(attrs={"data-object": "year"})
-        year = yearTag.string
+        # Год
+        year_tag = soup.find(attrs={"data-object": "year"})
+        year = year_tag.string
         advert["year"] = year[1:]
 
-        """Цена"""
-        priceTag = soup.find("span", class_="b-card-price__price")
-        price = priceTag.get_text()
+        # Цена
+        price_tag = soup.find("span", class_="b-card-price__price")
+        price = price_tag.get_text()
         advert["price"] = price
 
-        """Продавец и Регион и Место осмотра"""
-        contact_info = soup.find_all("dl", class_="clearfix")
-
-        try:
-            seller = contact_info[0].dd.get_text("")
-        except IndexError:
-            advert["seller"] = ""
-        else:
-            advert["seller"] = seller[:-14]
-
-        try:
-            contact_info[1].dt.get_text()
-        except IndexError:
-            pass
-        else:
-            if (contact_info[1].dt.get_text()) == u'Адрес:':
-                try:
-                    address = contact_info[1].dd.get_text()
-                except IndexError:
-                    address = ""
-                else:
-                    advert["region"] = address.split(",")[0]
-                    inspection_place = address.strip()[:-10]
-                    advert["inspection_place"] = inspection_place.strip()
-            else:
-                try:
-                    region = contact_info[1].dd.get_text()
-                except IndexError:
-                    advert["region"] = ""
-                else:
-                    advert["region"] = region
-
-                if (contact_info[2].dt.get_text()) == u'Осмотр:':
-                    try:
-                        inspection_place = contact_info[2].dd.get_text()
-                    except IndexError:
-                        advert["inspection_place"] = ""
-                    else:
-                        inspection_place = inspection_place.strip()[:-10]
-                        advert["inspection_place"] = inspection_place.strip()
-
-        """Телефон"""
+        # Телефон
         phone_tag = soup.find("img", class_="phone-part")
         try:
             phone = phone_tag.get("src")
@@ -214,43 +265,16 @@ def parse_advert_page(advert):
             phone_number = recognition_phone("phone/"+str(id)+".png")
             advert["phone"] = phone_number
 
-        """Текст объявления"""
-        textTag = soup.find("div", class_="au-block au-block-0")
+        # Текст объявления
+        text_tag = soup.find("div", class_="au-block au-block-0")
         try:
-            text = textTag.p.string
+            text = text_tag.p.string
         except AttributeError:
             advert["text"] = ""
         else:
             advert["text"] = text
 
-        """Изображения"""
-        images = []
-        images_ul = soup.find_all("li", class_="b-rama-thumbs__item")
-
-        if bool(images_ul) is not False:
-            if not os.path.exists("images/"+str(id)):
-                os.mkdir("images/"+str(id))
-
-            for li in images_ul:
-                try:
-                    image = li.a["data-original"]
-                except KeyError:
-                    continue
-                else:
-                    url_image = urlparse(image)
-                    url_path = url_image.path
-                    pattern = re.compile('^\/autocatalog')
-                    find = re.findall(pattern, url_path)
-
-                    if bool(find):
-                        break
-                    else:
-                        image_file = download_and_crop(image, id)
-                        images.append(image_file)
-
-        advert["images"] = images
-
-        """Таможка"""
+        # Таможка
         try:
             custom_house_state = soup.find("span", class_="b-card-status__text").string
         except AttributeError:
@@ -285,11 +309,11 @@ def parse_advert_page(advert):
             else:
                 advert[new_key] = params_table[key]
 
-        """КПП"""
+        # КПП
         kpp = advert.get("kpp")
         advert["kpp"] = kpp.split(",")[0]
 
-        """Двигатель"""
+        # Двигатель
         engine = advert.get("engine_type")
         engine = engine.split("/")
         len_engine = len(engine)
@@ -313,9 +337,18 @@ def parse_advert_page(advert):
     for key in advert.keys():
         print "%s => %s" % (key, advert[key])
 
-    db.am.update({"advert_url": url}, {"$set": {"advert": json.dumps(advert)}})
+    return advert
 
 
+# сохранения объявления
+def save_advert(advert):
+    if bool(advert) is not False:
+        advert_serialize = json.dumps(advert)
+        hash_md5 = hashlib.md5(json.dumps(advert, sort_keys=True)).hexdigest()
+        db.am_ru_adverts.update({"advert_url": url}, {"$set": {"advert": advert_serialize, "hash": hash_md5}})
+
+
+# удаление изображений
 def remove_all_images():
     if os.path.exists("images/"):
         shutil.rmtree("images/")
@@ -324,34 +357,55 @@ def remove_all_images():
 def main():
     action_type = None
     print "Список действий:"
-    print "1 - удалить все имеющиеся объявления"
-    print "2 - парсинг всех объявлений"
-    print "3 - выход из программы"
+    print "1 - удалить все имеющиеся объявления и изображения"
+    print "2 - поиск всех объялений на сайте"
+    print "3 - парсинг всех объявлений"
+    print "4 - перенос изображений"
+    print "5 - проверить изменения"
+    print "6 - выход из программы"
 
-    while action_type != 3:
+    while action_type != 6:
         action_type = int((raw_input("[]-> ")))
 
+        # действие 1
         if action_type == 1:
-            db.am.remove()
+            db.am_ru_adverts.remove()
             remove_all_images()
+
+        # действие 2
         elif action_type == 2:
             number_of_pages = get_count_pages(url)
             print number_of_pages
+
             parse_pages(number_of_pages)
-            count_adverts = db.am.find().count()
+            count_adverts = db.am_ru_adverts.find().count()
             print "Количество объявлений: ", count_adverts
+
+        # действие 3
+        elif action_type == 3:
             counter = 1
+
             if not os.path.exists("images"):
                 os.mkdir("images")
-            for advert in db.am.find():
+
+            for advert in db.am_ru_adverts.find():
                 print "Номер объявления: ", counter
-                parse_advert_page(advert)
+                advert_to_save = parse_advert_page(advert)
+                save_advert(advert_to_save)
+
                 counter += 1
+
+        # действие 4
+        elif action_type == 4:
+            for file_path, dirs, files in os.walk("images"):
+                for dir_name in dirs:
+                    os.chmod(os.path.join(file_path, dir_name), 0775)
+                for file_name in files:
+                    os.chmod(os.path.join(file_path, file_name), 0775)
+
+            path_to_copy = "tmp"
+            copytree("images", path_to_copy)
 
 
 if __name__ == "__main__":
     main()
-    # i = 1
-    # for advert in db.am.find():
-    #     print i
-    #     i += 1
