@@ -1,5 +1,5 @@
 <?php
- 
+
 error_reporting(E_ALL);
 ini_set('display_errors', true);
 ini_set('error_reporting',  E_ALL);
@@ -918,9 +918,9 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 				
 				if (!$exists = $advertActual->find(["advert_url"=>$advertToSave["url"]]))
 					$advertToSave["status"] = "new";
-				else if ($exists["hash_md5"] == $doc["hash_md5"])
+				else if ($exists["hash"] == $doc["hash"])
 					$advertToSave["status"] = "nochanged";
-				else if ($exists["hash_md5"] !== $doc["hash_md5"])
+				else if ($exists["hash"] !== $doc["hash"])
 					$advertToSave["status"] = "changed";
 				
 				$advert =  json_decode($doc["advert"], true);
@@ -932,6 +932,10 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			{
 				case "new":
 					$this->advertNewRecord($advertToSave);
+					/**
+					 * @todo сохранение в базу актуальных объявлений
+					 */
+					$adverts->save([$advertToSave, "hash" => $doc["hash"]]);
 					break;
 				case "nochanged":
 					$model = AdvertCar::model()->findByAttributes(["original_url"=>$advertToSave["url"]]);
