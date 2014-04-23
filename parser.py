@@ -82,7 +82,7 @@ def parse_page(url_page):
     for advert in adverts:
         advert_url = advert.a.get("href")
         print advert.a.get("href")
-        db.am_ru_adverts.insert({"advert_url": advert_url})
+        db.am_ru_adverts.insert({"advert_url": advert_url, "advert": ""})
 
 
 def parse_pages(count_pages):
@@ -136,6 +136,7 @@ def parse_advert_page(advert):
     url = advert.get("advert_url")
     id = advert.get("_id")
 
+    print "========================"
     print "URL: ", url
     print "ID: ", id
 
@@ -150,10 +151,14 @@ def parse_advert_page(advert):
     try:
         seller = contact_info[0].dd.get_text()
     except IndexError:
-        advert["seller"] = ""
+        advert["seller"] = 0
     else:
-        advert["seller"] = seller[:-14]
+        advert["seller"] = seller
 
+    advert["seller"] = re.sub("^\s+|\n|\r|\s+$", '', advert["seller"])
+
+    if u'Задать вопрос' in advert["seller"]:
+        advert["seller"] = advert["seller"][:-14]
     # не будем парсить объявления с незаполненым полем "Имя владельца"
     if len(advert["seller"]) == 0:
         return False
@@ -334,18 +339,12 @@ def parse_advert_page(advert):
             advert["engine_type"] = ""
             advert["engine_power"] = ""
 
-    for key in advert.keys():
-        print "%s => %s" % (key, advert[key])
+    # for key in advert.keys():
+    #     print "%s => %s" % (key, advert[key])
 
-    return advert
-
-
-# сохранения объявления
-def save_advert(advert):
-    if bool(advert) is not False:
-        advert_serialize = json.dumps(advert)
-        hash_md5 = hashlib.md5(json.dumps(advert, sort_keys=True)).hexdigest()
-        db.am_ru_adverts.update({"advert_url": url}, {"$set": {"advert": advert_serialize, "hash": hash_md5}})
+    hash_md5 = hashlib.md5(json.dumps(advert, sort_keys=True)).hexdigest()
+    db.am_ru_adverts.update({"advert_url": url}, {"$set": {"advert": json.dumps(advert), "hash": hash_md5}})
+    print "Сохранено"
 
 
 # удаление изображений
@@ -390,8 +389,7 @@ def main():
 
             for advert in db.am_ru_adverts.find():
                 print "Номер объявления: ", counter
-                advert_to_save = parse_advert_page(advert)
-                save_advert(advert_to_save)
+                parse_advert_page(advert)
 
                 counter += 1
 
