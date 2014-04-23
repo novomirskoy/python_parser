@@ -809,7 +809,7 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			die('<pre>'.print_r($advert->getErrors(), true).'</pre>');
 	}
 	
-	protected function advertUpdate($advert)
+	protected function advertUpdate($advert, $advertToSave)
 	{
 		echo "id = {$advert->id} ";
 		$advert->scenario = 'parsing_advert';
@@ -862,6 +862,43 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		}
 	}
 	
+	protected function advertNewRecord($advertToSave)
+	{
+		if (!$this->checkAdvert($advertToSave))
+		{
+			if ($model = $this->advertExists($advertToSave["url"]))
+				$this->advertUpdate($model, $advertToSave);
+			else
+			{
+				$model = new AdvertCar('parsing_advert_moderation');
+
+				foreach ($this->savingData as $param)
+					$model->$param = $doc[$param];
+
+				$this->advertSave($model);
+			}
+		}
+		else
+		{
+			if (!$this->advertDuplicateExists($advertToSave))
+			{
+				if ($model = $this->advertExists($advertToSave["url"]))
+					$this->advertUpdate($model, $advertToSave);
+				else
+				{
+					$model = new AdvertCar('parsing_advert');
+
+					foreach ($this->savingData as $param)
+						$model->$param = $doc[$param];
+
+					$model->post_status = 'p';
+
+					$this->advertSave($model);
+				}
+			}
+		}
+	}
+	
 	public function run($args)
 	{
 		$mongo = new MongoClient("mongodb://localhost");
@@ -876,55 +913,44 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		{
 			if (isset($doc["advert"]))
 			{
-				$advertUrl = $doc["advert_url"];
+				$advertToSave = [];
+				$advertToSave["url"] = $doc["advert_url"];
 				
-				if (!$exists = $advertActual->find(["advert_url"=>$advertUrl]))
+				if (!$exists = $advertActual->find(["advert_url"=>$advertToSave["url"]]))
 					$advertToSave["status"] = "new";
 				else if ($exists["hash_md5"] == $doc["hash_md5"])
 					$advertToSave["status"] = "nochanged";
-				else
+				else if ($exists["hash_md5"] !== $doc["hash_md5"])
 					$advertToSave["status"] = "changed";
 				
 				$advert =  json_decode($doc["advert"], true);
 				
-				$advertToSave = [];
-				$advertToSave["url"] = $doc["advert_url"];
-				
 				$this->advertNormalization($advert, $advertToSave);
 			}
 			
-			if ($this->checkAdvert($advertToSave))
+			switch ($advertToSave["status"])
 			{
-				if (!$this->advertDuplicateExists($advertToSave))
-				{
-					if ($model = $this->advertExists($advertToSave["url"]))
-						$this->advertUpdate($model);
-					else
-					{
-						$model = new AdvertCar('parsing_advert');
-
-						foreach ($this->savingData as $param)
-							$model->$param = $doc[$param];
-	
-						$model->post_status = 'p';
-						
-						$this->advertSave($model);
-					}
-				}
-			}
-			else
-			{
-				if ($model = $this->advertExists($advertToSave["url"]))
-					$this->advertUpdate($model);
-				else
-				{
-					$model = new AdvertCar('parsing_advert_moderation');
-
-					foreach ($this->savingData as $param)
-						$model->$param = $doc[$param];
+				case "new":
+					$this->advertNewRecord($advertToSave);
+					break;
+				case "nochanged":
+					$model = AdvertCar::model()->findByAttributes(["original_url"=>$advertToSave["url"]]);
 					
+					$endDate = \DateTime::createFromFormat('d.m.Y', $model->obj_show_date);
+					$currentDate = \DateTime::createFromFormat('d.m.Y', date('d.m.Y'));
+					$interval = $currentDate->diff($endDate);
+					
+					if ($interval < 7)
+						$model->obj_show_date = date('d.m.Y', strtotime('+'.Advert::$newAdOpenDays.' day'));
+					$model->change_date = $model->creation_date;
 					$this->advertSave($model);
-				}
+					break;
+				case "changed":
+					$model = AdvertCar::model()->findByAttributes(["original_url"=>$advertToSave["url"]]);
+					$this->advertUpdate($model, $advertToSave);
+					break;
+				default:
+					break;
 			}
 		}
 		
