@@ -829,12 +829,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 
     protected function removeIrrelevantAdverts($advertsActual)
     {
-        $advertActualUrl = [];
-        $cursor = $advertsActual->find();
+        $advertNotActualUrl = [];
+        $cursor = $advertsActual->find(["status" => "not_actual"]);
 
         foreach ($cursor as $doc)
         {
-            $advertActualUrl[] = $doc["advert_url"];
+            $advertNotActualUrl[] = $doc["url"];
         }
 
         $original_url = Yii::app()->db->createCommand()
@@ -846,7 +846,7 @@ class AddParsingAdvertsCommand extends CConsoleCommand
         $count = 0;
         foreach ($original_url as $url)
         {
-            if (!in_array($url["original_url"], $advertActualUrl))
+            if (!in_array($url["original_url"], $advertNotActualUrl))
             {
                 $count++;
                 echo "{$count} ";
@@ -861,11 +861,11 @@ class AddParsingAdvertsCommand extends CConsoleCommand
         }
     }
 
-    protected function advertNewRecord($advertToSave)
+    protected function advertNewRecord($advertToSave, $advertToSaveUrl)
     {
         if (!$this->checkAdvert($advertToSave))
         {
-            if ($model = $this->advertExists($advertToSave["url"]))
+            if ($model = $this->advertExists($advertToSaveUrl))
             {
                 $model->scenario = 'parsing_advert_moderation';
                 $this->advertUpdate($model, $advertToSave);
@@ -884,7 +884,7 @@ class AddParsingAdvertsCommand extends CConsoleCommand
         {
             if (!$this->advertDuplicateExists($advertToSave))
             {
-                if ($model = $this->advertExists($advertToSave["url"]))
+                if ($model = $this->advertExists($advertToSaveUrl))
                 {
                     $model->scenario = 'parsing_advert';
                     $this->advertUpdate($model, $advertToSave);
@@ -909,57 +909,70 @@ class AddParsingAdvertsCommand extends CConsoleCommand
         $mongo = new MongoClient("mongodb://localhost");
         $db = $mongo->selectDb("adverts");
 
+		// Постоянная база со спарсенными объявлениями
         $advertsActual = new MongoCollection($db, self::DRIVENN_ADVERTS);
+		// База с последними спарсенными объявлениями
         $adverts = new MongoCollection($db, self::AM_RU_ADVERTS);
+		
+		$advertsActual->update(["status" => "actual"], ['$set' => ["status" => "not_actual"], [false, true]]);
 
         $cursor = $adverts->find();
 
         foreach ($cursor as $doc)
         {
-            if (isset($doc["advert"]))
+            if (!empty($doc["advert"]))
             {
                 $advertToSave = [];
-                $advertToSave["url"] = $doc["advert_url"];
+                $advertToSaveUrl = $doc["advert_url"];
                 $advert =  json_decode($doc["advert"], true);
 
                 $this->advertNormalization($advert, $advertToSave);
 
                 // если объявление не существует
-                if (!$exists = $advertsActual->find(["advert_url" => $advertToSave["url"]]))
+                if (!$exists = $advertsActual->find(["advert_url" => $advertToSaveUrl]))
                 {
-                    $advertToSave["status"] = "new";
-                    // делаем запись в бд
-                    $this->advertNewRecord($advertToSave);
-                    // сохраняем объявление в коллекцию с объявлениями
-                    $adverts->save([$advertToSave, "hash" => $doc["hash"]]);
+                    $this->advertNewRecord($advertToSave, $advertToSaveUrl);
+                    
+                    $adverts->save([$advertToSave, "url" => $advertToSaveUrl, "hash" => $doc["hash"], "status" => "actual"]);
                 }
                 // если объявление существует и хэши совпадают
                 else if ($exists["hash"] == $doc["hash"])
                 {
-                    $advertToSave["status"] = "not_changed";
+                    $model = AdvertCar::model()->findByAttributes(["original_url" => $advertToSaveUrl]);
+					
+					if ($model->status == "p")
+					{
+						$endDate = \DateTime::createFromFormat('d.m.Y', $model->obj_show_date);
+						$currentDate = \DateTime::createFromFormat('d.m.Y', date('d.m.Y'));
+						$interval = $currentDate->diff($endDate);
 
-                    $model = AdvertCar::model()->findByAttributes(["original_url" => $advertToSave["url"]]);
+						if ($interval->days < 7)
+							$model->obj_show_date = date('d.m.Y', strtotime('+' . Advert::$newAdOpenDays . ' day'));
 
-                    $endDate = \DateTime::createFromFormat('d.m.Y', $model->obj_show_date);
-                    $currentDate = \DateTime::createFromFormat('d.m.Y', date('d.m.Y'));
-                    $interval = $currentDate->diff($endDate);
+						$model->change_date = $model->creation_date;
 
-                    if ($interval->days < 7)
-                        $model->obj_show_date = date('d.m.Y', strtotime('+' . Advert::$newAdOpenDays . ' day'));
-
-                    $model->change_date = $model->creation_date;
-                    $this->advertSave($model);
+						$this->advertSave($model);
+						
+						$adverts->save(["status" => "actual"]);
+					}
+					
+					if ($model->status == 'm')
+						$adverts->save(["status" => "actual"]);
                 }
                 // если объявление существует, но хэши не совпадают
                 else if ($exists["hash"] !== $doc["hash"])
                 {
-                    $advertToSave["status"] = "changed";
-
-                    $model = AdvertCar::model()->findByAttributes(["original_url"=>$advertToSave["url"]]);
-                    $this->advertUpdate($model, $advertToSave);
-
-                    // обновляем объявление из коллекции
-                    $adverts->save([$advertToSave, "hash" => $doc["hash"]]);
+                    $model = AdvertCar::model()->findByAttributes(["original_url" => $advertToSaveUrl]);
+					
+					if ($model->status == "p")
+					{
+						$this->advertUpdate($model, $advertToSave);
+						// обновляем объявление из коллекции
+						$adverts->save(["hash" => $doc["hash"], "status" => "actual"]);
+					}
+					
+					if ($model->status == 'm')
+						$adverts->save(["status" => "actual"]);
                 }
             }
         }
