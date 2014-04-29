@@ -9,9 +9,11 @@ import os
 import sys
 import shutil
 import hashlib
+import urllib2
 import pyocr
 import pyocr.builders
 from urlparse import urlparse
+from urlparse import urlsplit, urlunsplit
 from bs4 import BeautifulSoup
 from urllib2 import urlopen
 from PIL import Image
@@ -140,8 +142,12 @@ def parse_advert_page(advert):
     print "URL: ", url
     print "ID: ", id
 
-    html_doc = urlopen(url).read()
-    soup = BeautifulSoup(html_doc)
+    try:
+        html_doc = urlopen(url).read()
+    except urllib2.HTTPError:
+        return False
+    else:
+        soup = BeautifulSoup(html_doc)
 
     advert = {}
 
@@ -151,14 +157,18 @@ def parse_advert_page(advert):
     try:
         seller = contact_info[0].dd.get_text()
     except IndexError:
-        advert["seller"] = 0
+        advert["seller"] = ""
     else:
         advert["seller"] = seller
 
-    advert["seller"] = re.sub("^\s+|\n|\r|\s+$", '', advert["seller"])
+    try:
+        advert["seller"] = re.sub("^\s+|\n|\r|\s+$", '', advert["seller"])
+    except TypeError:
+        pass
+    else:
+        if u'Задать вопрос' in advert["seller"]:
+            advert["seller"] = advert["seller"][:-14]
 
-    if u'Задать вопрос' in advert["seller"]:
-        advert["seller"] = advert["seller"][:-14]
     # не будем парсить объявления с незаполненым полем "Имя владельца"
     if len(advert["seller"]) == 0:
         return False
@@ -204,11 +214,27 @@ def parse_advert_page(advert):
 
         for li in images_ul:
             try:
-                image = li.a["data-original"]
+                image_path = li.a["data-original"]
             except KeyError:
                 continue
             else:
-                url_image = urlparse(image)
+                image_path = urlparse(image_path)
+
+                path = image_path.path
+                path = path.split("/")
+                path[3] = "default"
+                path = "/".join(path)
+
+                scheme = image_path.scheme
+                netloc = image_path.netloc
+                query = image_path.query
+                fragment = image_path.fragment
+
+                new_path = (scheme, netloc, path, query, fragment)
+                image_path = urlunsplit(new_path)
+                print image_path
+
+                url_image = urlparse(image_path)
                 url_path = url_image.path
                 pattern = re.compile('^\/autocatalog')
                 find = re.findall(pattern, url_path)
@@ -216,7 +242,7 @@ def parse_advert_page(advert):
                 if bool(find):
                     return False
                 else:
-                    image_file = download_and_crop(image, id)
+                    image_file = download_and_crop(image_path, id)
                     images.append(image_file)
     else:
         return False
@@ -263,12 +289,16 @@ def parse_advert_page(advert):
                 phone_number = base64.b64decode(phone_encoded + "=")
                 advert["phone"] = phone_number
         else:
-            img = urlopen(phone).read()
-            img_file = open("phone/"+str(id)+".png", "wb")
-            img_file.write(img)
-            img_file.close()
-            phone_number = recognition_phone("phone/"+str(id)+".png")
-            advert["phone"] = phone_number
+            try:
+                img = urlopen(phone).read()
+            except urllib2.HTTPError:
+                return False
+            else:
+                img_file = open("phone/"+str(id)+".png", "wb")
+                img_file.write(img)
+                img_file.close()
+                phone_number = recognition_phone("phone/"+str(id)+".png")
+                advert["phone"] = phone_number
 
         # Текст объявления
         text_tag = soup.find("div", class_="au-block au-block-0")
