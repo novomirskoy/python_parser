@@ -390,10 +390,9 @@ def main():
     print "2 - поиск всех объялений на сайте"
     print "3 - парсинг всех объявлений"
     print "4 - перенос изображений"
-    print "5 - проверить изменения"
-    print "6 - выход из программы"
+    print "5 - выход из программы"
 
-    while action_type != 6:
+    while action_type != 5:
         action_type = int((raw_input("[]-> ")))
 
         # действие 1
