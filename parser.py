@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import logging
+import time
 import pymongo
 import json
 import locale
@@ -19,6 +21,10 @@ from urllib2 import urlopen
 from PIL import Image
 
 locale.setlocale(locale.LC_ALL, "")
+logfile = "logs/%s_parser.log" % str(time.ctime())
+logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
+                    level=logging.DEBUG,
+                    filename=logfile)
 
 client = pymongo.MongoClient("localhost", 27017)
 db = client.adverts
@@ -83,15 +89,18 @@ def parse_page(url_page):
     adverts = soup.find_all("div", class_="title")
     for advert in adverts:
         advert_url = advert.a.get("href")
-        print advert.a.get("href")
+        # print advert.a.get("href")
+        logging.info(advert.a.get("href"))
         db.am_ru_adverts.insert({"advert_url": advert_url, "advert": ""})
 
 
 def parse_pages(count_pages):
     for i in xrange(0, int(count_pages)):
-        print "Номер страницы:", i
+        # print "Номер страницы:", i
+        logging.info(u"Номер страницы с объявлениями "  + unicode(i))
         page = url_page + str(i)
-        print page
+        # print page
+        logging.info(u"URL страницы с объявлениями " + page)
         parse_page(page)
 
 
@@ -138,13 +147,16 @@ def parse_advert_page(advert):
     url = advert.get("advert_url")
     id = advert.get("_id")
 
-    print "========================"
-    print "URL: ", url
-    print "ID: ", id
+    # print "========================"
+    # print "URL: ", url
+    # print "ID: ", id
+    logging.info(u"URL объявления " + url)
+    logging.info(u"ID объявления " + unicode(id))
 
     try:
         html_doc = urlopen(url).read()
     except urllib2.HTTPError:
+        logging.error(u"Невозможно загрузить страницу")
         return False
     else:
         soup = BeautifulSoup(html_doc)
@@ -171,6 +183,7 @@ def parse_advert_page(advert):
 
     # не будем парсить объявления с незаполненым полем "Имя владельца"
     if len(advert["seller"]) == 0:
+        logging.warning(u"У объявления отсутствует имя владельца")
         return False
 
     try:
@@ -232,7 +245,7 @@ def parse_advert_page(advert):
 
                 new_path = (scheme, netloc, path, query, fragment)
                 image_path = urlunsplit(new_path)
-                print image_path
+                # print image_path
 
                 url_image = urlparse(image_path)
                 url_path = url_image.path
@@ -240,6 +253,7 @@ def parse_advert_page(advert):
                 find = re.findall(pattern, url_path)
 
                 if bool(find):
+                    logging.warning(u"У объявления фотографии из каталога")
                     return False
                 else:
                     image_file = download_and_crop(image_path, id)
@@ -385,14 +399,14 @@ def remove_all_images():
 
 def main():
     action_type = None
-    print "Список действий:"
-    print "1 - удалить все имеющиеся объявления и изображения"
-    print "2 - поиск всех объялений на сайте"
-    print "3 - парсинг всех объявлений"
-    print "4 - перенос изображений"
-    print "5 - выход из программы"
 
     while action_type != 5:
+        print "Список действий:"
+        print "1 - удалить все имеющиеся объявления и изображения"
+        print "2 - поиск всех объялений на сайте"
+        print "3 - парсинг всех объявлений"
+        print "4 - перенос изображений"
+        print "5 - выход из программы"
         action_type = int((raw_input("[]-> ")))
 
         # действие 1
