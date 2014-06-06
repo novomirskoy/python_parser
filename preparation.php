@@ -1007,7 +1007,7 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			$advertHash = $document["hash"];
 
 			$actualAdvertCursor = $this->_advertsActualCollection->find(["advert_url" => $advertUrl])->limit(1);
-			$actualAdvert = $actualAdvertCursor->current();
+			$actualAdvert = $actualAdvertCursor->getNext();
 			
 			// если объявление не существует или если существует, но хэши не совпадают
 			if (is_null($actualAdvert) || (isset($actualAdvert["hash"]) && ($actualAdvert["hash"] !== $advertHash)))
@@ -1038,7 +1038,6 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			// если объявление существует и хеши совпадают
 			else
 			{
-				echo "объявление существует и хеши совпадают \n";
 				$model = AdvertCar::model()->findByAttributes(["original_url" => $advertUrl]);
 				
 				if (!$model)
@@ -1054,13 +1053,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 						echo $model->obj_show_date, ' - продлеваем', "\n";
 						
 						$model->scenario = 'parsing_advert';
-						$model->obj_show_date = date('Y-m-d', strtotime('+ 14 day'));
+						$model->obj_show_date = date('Y-m-d', strtotime('+'.self::$oldAdOpenDays.' day'));
 						
-						echo 'Продлеваем объявление id = ', $model->id, " до ", $model->obj_show_date, "\n";
+						echo 'Продлеваем объявление id = ', $model->id, "\n";
 						
 						$this->advertSave($model);
 					}
-					echo "Дата скрытия объекта id = ", $model->id, " = ", $model->obj_show_date, "\n";
 					
 					$this->updateActualCollection($advertUrl);
 				}
