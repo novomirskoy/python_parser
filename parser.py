@@ -50,6 +50,7 @@ params = {
 # Копирование дерева каталогов
 def copytree(src, dst, symlinks=0):
     print "Копирование папки " + src
+    logging.info(u"Копирование папки " + src)
     names = os.listdir(src)
     if not os.path.exists(dst):
         os.mkdir(dst)
@@ -67,6 +68,7 @@ def copytree(src, dst, symlinks=0):
                 shutil.copy(src_name, dst_name)
         except (IOError, os.error) as why:
             print "Невозможно скопировать %s в %s: %s" % (src_name, dst_name, str(why))
+            logging.error("Невозможно скопировать %s в %s: %s"  % (src_name, dst_name, str(why)))
 
 
 # Возвращает количество страниц
@@ -219,7 +221,7 @@ def parse_advert_page(advert):
 
     # Изображения
     images = []
-    images_ul = soup.find_all("li", class_="b-rama-thumbs__item")
+    images_ul = soup.find_all("li", class_="au-rama-thumbs__item")
 
     if bool(images_ul) is not False:
         if not os.path.exists("images/"+str(id)):
@@ -258,7 +260,9 @@ def parse_advert_page(advert):
                 else:
                     image_file = download_and_crop(image_path, id)
                     images.append(image_file)
+                    logging.info(u"Ссылка на изображение" + image_path)
     else:
+        logging.warning(u"Невозможно загрузить изображение")
         return False
 
     advert["images"] = images
@@ -388,6 +392,7 @@ def parse_advert_page(advert):
 
     hash_md5 = hashlib.md5(json.dumps(advert, sort_keys=True)).hexdigest()
     db.am_ru_adverts.update({"advert_url": url}, {"$set": {"advert": json.dumps(advert), "hash": hash_md5}})
+    logging.info(u"Объявление сохранено")
     print "Сохранено"
 
 
@@ -400,13 +405,14 @@ def remove_all_images():
 def main():
     action_type = None
 
-    while action_type != 5:
+    while action_type != 6:
         print "Список действий:"
         print "1 - удалить все имеющиеся объявления и изображения"
         print "2 - поиск всех объялений на сайте"
         print "3 - парсинг всех объявлений"
         print "4 - перенос изображений"
-        print "5 - выход из программы"
+        print "5 - скопировать базу mongo"
+        print "6 - выход из программы"
         action_type = int((raw_input("[]-> ")))
 
         # действие 1
@@ -418,10 +424,12 @@ def main():
         elif action_type == 2:
             number_of_pages = get_count_pages(url)
             print number_of_pages
+            logging.info(u"количество страниц " + unicode(number_of_pages))
 
             parse_pages(number_of_pages)
             count_adverts = db.am_ru_adverts.find().count()
             print "Количество объявлений: ", count_adverts
+            logging.info(u"Количество объявлений " + unicode(count_adverts))
 
         # действие 3
         elif action_type == 3:
@@ -446,6 +454,15 @@ def main():
 
             path_to_copy = "tmp"
             copytree("images", path_to_copy)
+
+        # действие 5
+        # подключаемся к удаленной базе и удаляем коллекцию am_ru_adverts
+        remote_client = pymongo.MongoClient("81.18.135.85", 27017)
+        remote_db = remote_client.adverts
+        remote_db.am_ru_adverts.remove()
+        # переносим все данные из локальной базы в удаленную
+        for advert in db.am_ru_adverts.find():
+            remote_db.am_ru_adverts.insert(advert)
 
 
 if __name__ == "__main__":
