@@ -1,5 +1,7 @@
 <?php
 
+namespace Commands;
+
 error_reporting(E_ALL);
 ini_set('display_errors', true);
 ini_set('error_reporting',  E_ALL);
@@ -7,15 +9,21 @@ ini_set('error_reporting',  E_ALL);
 class AddParsingAdvertsCommand extends CConsoleCommand
 {
 	/**
-	 * Постоянная база со спарсенными объявлениями
+	 * Постоянная база в которой хранять спарсенные объявления
 	 */
 	private $_advertsActualCollection;
 
 	/**
 	 * База с последними спарсенными объявлениями
+	 * удаляеться каждый раз при новом парсинге
 	 */
 	private $_advertsOriginalCollection;
 
+	/**
+	 * Таблица соотвествия
+	 * 
+	 * @var array mixed
+	 */
 	public $tableConformity = [
 		// УАЗ
 		"20" => [
@@ -115,8 +123,8 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		],
 		// Maserati
 		"50" => [
-			"229" => "228",
-			"3201 GT" => "3200 GT",
+			"229"		=> "228",
+			"3201 GT"	=> "3200 GT",
 		],
 		// Lifan
 		"53" => [
@@ -264,6 +272,277 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			"F-151" => "F-150",
 			"C-MAX" => "Focus C-MAX",
 		],
+		// Коммерческие автомобили
+		// Baw
+		"6689" => [
+			"Tonic" => "Tonic 33463",
+		],
+		// Citroen
+		"6690" => [
+			"Berlingo"	=> "Berlingo фургон",
+			"Nemo"		=> "Nemo",
+			"C15"		=> "C15",
+			"C25"		=> "C25",
+			"C35"		=> "C35",
+			"C8"		=> "C8",
+			"Dispatch"	=> "Dispatch",
+			"Evasion"	=> "Evasion",
+			"H Van"		=> "H Van",
+			"Relay"		=> "Relay",
+			"Synergie"	=> "Synergie",
+		],
+		// Fiat
+		"6691" => [
+			"Doblo"		=> "Doblo Cargo",
+			"Scudo"		=> "Scudo",
+			"Florino"	=> "Florino",
+			"Daily"		=> "Daily",
+			"Pratico"	=> "Pratico",
+			"Qubo"		=> "Qubo",
+			"Strada"	=> "Strada",
+			"Talento"	=> "Talento",
+			"Ulysse"	=> "Ulysse",
+		],
+		// Ford
+		"6692" => [
+			"F-Series"			=> "F-Series",
+			"Escort"			=> "Escort Express",
+			"Tourneo Custom"	=> "Tourneo Custom",
+			"Tourneo Connect"	=> "Tourneo Connect",
+			"Transit Connect"	=> "Transit Connect",
+			"Ranger"			=> "Ranger",
+			"Aerostar"			=> "Aerostar",
+			"Econoline"			=> "Econoline",
+			"Excursion"			=> "Excursion",
+			"Freda"				=> "Freda",
+			"Lobo"				=> "Lobo",
+			"Pampa"				=> "Pampa",
+			"Windstar"			=> "Windstar",
+		],
+		// Foton
+		"6693" => [
+			"Aumark BJ 1039"	=> "Aumark бортовой",
+			"Aumark BJ 1049"	=> "Aumark бортовой",
+			"Ollin BJ 1039"		=> "Olin бортовой",
+			"Ollin BJ 1041"		=> "Olin бортовой",
+			"Sapu"				=> "Sapu",
+			"Tunland C1"		=> "Tunland C1",
+			"Tunland C2"		=> "Tunland C2",
+			"Tunland C3"		=> "Tunland C3",
+			"Tunland CX"		=> "Tunland CX",
+			"Tunland L"			=> "Tunland L",
+			"View C"			=> "View C",
+			"View L"			=> "View L",
+			"View M"			=> "View M",
+			"View W"			=> "View W",
+		],
+		// Fuso
+		"6694" => [],
+		// Hino
+		"6695" => [
+			"300" => "300",
+		],
+		// Hyandai
+		"6696" => [
+			"Libero"		=> "Libero",
+			"H200"			=> "H-200",
+			"H-100"			=> "H-100",
+			"H-1"			=> "H-1",
+			"Porter"		=> "Porter",
+			"Bakkie"		=> "Bakkie",
+			"Grace"			=> "Grace",
+			"H300"			=> "H300",
+			"HR"			=> "HR",
+			"i800"			=> "i800",
+			"iLoad"			=> "iLoad",
+			"iMax"			=> "iMax",
+			"Libero"		=> "Libero",
+			"Satellite"		=> "Satellite",
+			"Shehzore"		=> "Shehzore",
+			"Starex"		=> "Starex",
+			"TQ"			=> "TQ",
+		],
+		// ISUZU
+		"6697" => [
+			"N-Series"	=> "NQR",
+			"Midi"		=> "Midi",
+			"Como"		=> "Como",
+			"Campo"		=> "Campo",
+			"D-Max"		=> "D-Max",
+			"Fargo"		=> "Fargo",
+			"Fuego"		=> "Fuego",
+			"Hombre"	=> "Hombre",
+			"i-Series"	=> "i-Series",
+			"KB"		=> "KB",
+			"Wasp"		=> "Wasp",
+			"WFR"		=> "WFR",
+		],
+		// Iveco
+		"6698" => [
+			"Massif"	=> "Massif",
+		],
+		// KIA
+		"53753" => [
+			"Besta"		=> "Besta",
+			"Bongo"		=> "Bongo",
+			"Towner"	=> "Towner",
+		],
+		// Mercedes-Benz
+		"6699" => [
+			"V-Класс"	=> "V-Класс",
+			"T2"		=> "T2",
+			"T1"		=> "T1",
+			"Vaneo"		=> "Vaneo",
+			"Viano"		=> "Viano",
+		],
+		// Nissan
+		"6700" => [
+			"Vanette"		=> "Vanette",
+			"Urvan"			=> "Urvan",
+			"Serena"		=> "Serena",
+			"Primastar"		=> "Primastar",
+			"NV200"			=> "NV200",
+			"Interstar"		=> "Interstar",
+			"Homy"			=> "Homy",
+			"Caravan"		=> "Caravan",
+			"Atlas"			=> "Atlas",
+			"NP300"			=> "NP-300",
+			"Cabstar"		=> "Cabstar Double Cab",
+			"Caball"		=> "Caball",
+			"Clipper"		=> "Clipper",
+			"Elgrand"		=> "Elgrand",
+			"Hardbody"		=> "Hardbody",
+			"Titan"			=> "Titan",
+			"Hustler"		=> "Hustler",
+			"Roox"			=> "Roox",
+			"Junior"		=> "Junior",
+			"Kubistar"		=> "Kubistar",
+			"Largo"			=> "Largo",
+			"NP200"			=> "NP200",
+			"NV"			=> "NV",
+			"NV350"			=> "NV350",
+			"NV400"			=> "NV400",
+			"Otti"			=> "Otti",
+			"Pick UP"		=> "Pick UP",
+		],
+		// Peugeot
+		"6701" => [
+			"J5"		=> "J-Серия",
+			"Expert"	=> "Expert",
+			"Bipper"	=> "Bipper",
+			"Partner"	=> "Partner Origin VU",
+			"Boxer"		=> "Boxer фургон",
+			"J7"		=> "J7",
+			"Hoggar"	=> "Hoggar",
+		],
+		// Renault
+		"6702" => [
+			"Maxity"		=> "Maxity",
+			"Mascott"		=> "Mascott",
+			"Kangoo"		=> "Kangoo Fourgon",
+			"Master"		=> "Master",
+			"Trafic"		=> "Trafic Passenger",
+			"Estafette"		=> "Estafette",
+			"Express"		=> "Express",
+		],
+		// Skoda
+		"6703" => [
+			"Praktik" => "Praktik",
+		],
+		// Tata
+		"6704" => [],
+		// Toyta
+		"6705" => [
+			"Tundra"			=> "Tundra Pick-Up",
+			"Town Ace"			=> "Town Ace",
+			"Tacoma"			=> "Tacoma",
+			"Model F"			=> "Model F",
+			"Lite Ace"			=> "Lite Ace",
+			"Hilux"				=> "Hilux",
+			"Hiace"				=> "Hiace",
+			"Estima"			=> "Estima",
+			"Granvia"			=> "Granvia",
+			"Master"			=> "Master",
+			"MasterAce"			=> "MasterAce",
+			"MiniAce"			=> "MiniAce",
+			"Noah"				=> "Noah",
+			"ProAce"			=> "ProAce",
+			"Quantum"			=> "Quantum",
+			"Regius"			=> "Regius",
+			"Space Cruiser"		=> "Space Cruiser",
+			"Sparky"			=> "Sparky",
+			"Stallion"			=> "Stallion",
+			"Stout"				=> "Stout",
+			"T100"				=> "T100",
+			"Tacoma"			=> "Tacoma",
+			"Tamaraw FX"		=> "Tamaraw FX",
+			"Unser"				=> "Unser",
+			"Van"				=> "Van",
+			"Vellfire"			=> "Vellfire",
+			"Voxy"				=> "Voxy",
+		],
+		// Volkswagen
+		"6706" => [
+			"LT"			=> "LT",
+			"Caravelle"		=> "Caravelle",
+			"Touran"		=> "Touran",
+			"Sharan"		=> "Sharan",
+			"Amarok"		=> "Amarok",
+			"California"	=> "California",
+			"Multivan"		=> "Multivan",
+			"L80"			=> "L80",
+			"Saveiro"		=> "Saveiro",
+			"Suran"			=> "Suran",
+			"Taro"			=> "Taro",
+		],
+		// ВИС
+		"6707" => [
+			"2345" => "234500-30 (бортовой)",
+			"1705" => "1705",
+			"2347" => "2347",
+		],
+		// ГАЗ
+		"6708" => [
+			"3310 Валдай"	=> "3310",
+			"Соболь 2310"	=> "2310",
+			"2757"			=> "2757",
+			"2834"			=> "2834",
+			"2818"			=> "2818",
+			"2704"			=> "2704",
+			"33023"			=> "33023",
+			"3221"			=> "3221 микроавтобус коммерческий",
+			"3302"			=> "3302",
+			"Соболь 2752"	=> "2752 фургон",
+			"Соболь 2753"	=> "2752 комби",
+			"Соболь 2310"	=> "Соболь - Бизнес борт-тент",
+			"2308 Атаман"	=> "2308 Атаман",
+			"51"			=> "51",
+			"66"			=> "66",
+			"67"			=> "67",
+			"69"			=> "69",
+			"2707"			=> "2707",
+			"2742"			=> "2742",
+			"3274"			=> "3274",
+			"3796"			=> "3796",
+		],
+		// ТагАЗ
+		"6709" => [
+			"Master"	=> "LC100 (Master)",
+			"Hardy"		=> "Hardy",
+		],
+		// Уаз
+		"6710" => [
+			"452"			=> "452",
+			"452Д"			=> "452",
+			"2360"			=> "2360",
+			"39094"			=> "39094",
+			"3303"			=> "3303",
+			"2206"			=> "2206",
+			"3909"			=> "3909",
+			"39625"			=> "39625",
+			"3741"			=> "3741",
+			"23602 Cargo"	=> "23602 Cargo",
+		],
 	];
 
 	public $steering_wheel_array = [
@@ -331,13 +610,13 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		"engine_type",
 		"kpp",
 		"engine_volume",
-//		"engine_power",
-//		"color",
 		"phone",
 		"price",
 		"distance",
-//		"text",
 		"region",
+//		"text",
+		"engine_power",
+//		"color",
 	];
 
 	public $savingData = [
@@ -366,21 +645,45 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		"region",
 		"inspection_plase",
 	];
+	
+	/**
+	 * Хранит в себе все марки легковых
+	 * и коммерческих автомобилей
+	 * 
+	 * @var array $brands
+	 */
+	public static $brands = null;
+		
+	/**
+	 * Хранит в себе все модели легковых
+	 * и коммерческих автомобилей
+	 * 
+	 * @var array $models
+	 */
+	public static $models = null;
+	
+	/**
+	 * Хранит в себе все ids легковых
+	 * и коммерческих автомобилей
+	 * 
+	 * @var array $brandIds
+	 */
+	public static $brandIds = null;
 
-	protected function advertDuplicateExists($advertToSave)
+	protected function advertDuplicateExists($advert)
 	{
 		$attributes = [
-			"seller"			=> $advertToSave["seller"],
-			"brand"				=> $advertToSave["brand"],
-			"model"				=> $advertToSave["model"],
-			"year"				=> $advertToSave["year"],
-			"body"				=> $advertToSave["body"],
-			"transmission"		=> $advertToSave["transmission"],
-			"steering_wheel"	=> $advertToSave["steering_wheel"],
-			"engine_type"		=> $advertToSave["engine_type"],
-			"phone"				=> $advertToSave["phone"],
-			"price"				=> $advertToSave["price"],
-			"distance"			=> $advertToSave["distance"],
+			"seller"			=> $advert["seller"],
+			"brand"				=> $advert["brand"],
+			"model"				=> $advert["model"],
+			"year"				=> $advert["year"],
+			"body"				=> $advert["body"],
+			"transmission"		=> $advert["transmission"],
+			"steering_wheel"	=> $advert["steering_wheel"],
+			"engine_type"		=> $advert["engine_type"],
+			"phone"				=> $advert["phone"],
+			"price"				=> $advert["price"],
+			"distance"			=> $advert["distance"],
 			"hidden"			=> 0,
 		];
 
@@ -392,24 +695,76 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return false;
 	}
 
-	protected function brandArray()
+	/**
+	 * Возвращает массив со всеми марками
+	 * легковых и коммерческих авто
+	 * 
+	 * @return array
+	 */
+	public static function getBrands()
 	{
-		$brand_array = Yii::app()
+		if (!is_null(self::$brands))
+			return self::$brands;
+		
+		self::$brands = Yii::app()
 			->db
-			->createCommand("SELECT id, name FROM brand_new_car WHERE hidden=0 ORDER BY name")
+			->createCommand("SELECT id, name, category FROM brands WHERE category IN (1,2) ORDER BY name")
 			->queryAll();
-		return $brand_array;
+		
+		return self::$brands;
 	}
 
-	protected function modelArray()
+	/**
+	 * Возвращает массив со всеми моделями
+	 * легковых и коммерческих авто
+	 * 
+	 * @return array
+	 */
+	public static function getModels()
 	{
-		$model_array = Yii::app()
+		if (!is_null(self::$models))
+			return self::$models;
+		
+		$brandIds = implode(",", self::getBrandIds());
+		
+		self::$models = Yii::app()
 			->db
-			->createCommand("SELECT id, name, brand FROM model_new_car WHERE hidden=0 ORDER BY name")
+			->createCommand('SELECT id, name FROM models WHERE category IN (' . $brandIds . ') ORDER BY name')
 			->queryAll();
-		return $model_array;
+		
+		return self::$models;
+	}
+	
+	/**
+	 * Возвращает ids марок легковых и
+	 * коммерческих автомобилей
+	 * 
+	 * @return array
+	 */
+	public static function getBrandIds()
+	{
+		if (!is_null(self::$brandIds))
+			return self::$brandIds;
+		
+		$brands = self::getBrands();
+		
+		self::$brandIds = array();
+		
+		foreach ($brands as $brand)
+		{
+			if (!in_array($brand["id"], self::$brandIds))
+				self::$brandIds[] = $brand["id"];
+		}
+		
+		return self::$brandIds;
 	}
 
+	/**
+	 * Валидация объявления
+	 * 
+	 * @param array $advert Объявление
+	 * @return boolean
+	 */
 	protected function validateAdvert($advert)
 	{
 		foreach ($this->requiredParams as $requiredParam)
@@ -422,6 +777,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return true;
 	}
 
+	/**
+	 * Приводит параметр "дистанция" к нормальному виду
+	 * 
+	 * @param string $distance Дистанция
+	 * @return string
+	 */
 	protected function formatDistance($distance)
 	{
 		$distance = str_replace(" ", "", $distance);
@@ -431,6 +792,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return $distance;
 	}
 
+	/**
+	 * Приводит параметр "цена" к нормальному виду
+	 * 
+	 * @param string $price Цена
+	 * @return string
+	 */
 	protected function formatPrice($price)
 	{
 		$price = str_replace(" ", "", $price);
@@ -438,6 +805,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return $price;
 	}
 
+	/**
+	 * Приводит параметр "телефон" к нормальному виду
+	 * 
+	 * @param string $phone Телефон
+	 * @return string
+	 */
 	protected function formatPhone($phone)
 	{
 		$phone = str_replace(" ", "", $phone);
@@ -452,6 +825,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return $phone;
 	}
 
+	/**
+	 * Приводит параметр "регион" к нормальному виду
+	 * 
+	 * @param string $region Регион
+	 * @return string
+	 */
 	protected function formatRegion($region)
 	{
 		$region = preg_replace("/\s\s+/", "", $region);
@@ -459,6 +838,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return ucfirst(strtolower($region));
 	}
 
+	/**
+	 * Приводит параметр "продавец" к нормальному виду 
+	 * 
+	 * @param string $seller Продавец
+	 * @return string
+	 */
 	protected function formatSeller($seller)
 	{
 		$exceptionSeller = [
@@ -466,6 +851,8 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			'АвтоСтайл',
 			'БЦР Моторс', 
 			'АвтоРегион НН',
+			'Авто Лайф',
+			'Global Cars',
 		];
 
 		$seller = preg_replace("/\s\s+/", "", $seller);
@@ -481,6 +868,12 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			return ucfirst(strtolower($seller));
 	}
 
+	/**
+	 * Приводит параметр "цвет" к нормальному виду
+	 * 
+	 * @param string $color Цвет
+	 * @return string
+	 */
 	protected function formatColor($color)
 	{
 		$color = str_replace("  ", "", $color);
@@ -488,38 +881,59 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return strtolower($color);
 	}
 
+	/**
+	 * Приводит параметр "трансмиссия" к формату<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $transmission Трансмиссия
+	 * @return integer
+	 */
 	protected function formatTransmission($transmission)
 	{
 		foreach ($this->transmission_array as $key => $item)
 		{
-			$find = preg_match("/\b{$transmission}\b/iu", $item);
+			$pattern = "/\b{$transmission}\b/iu";
 
-			if ($find)
+			if (preg_match($pattern, $item))
 				return $key;
 		}
 	}
 
-	protected function formatEngineType($engine_type)
+	/**
+	 * Приводит параметр "тип двигателя" к формату<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $engineType Тип двигателя
+	 * @return integer
+	 */
+	protected function formatEngineType($engineType)
 	{
-		switch ($engine_type)
+		switch ($engineType)
 		{
 			case "Бензин":
-				$engine_type = 1;
+				$engineType = 1;
 				break;
 			case "Дизель":
-				$engine_type = 2;
+				$engineType = 2;
 				break;
 			case "Гибрид":
-				$engine_type = 5;
+				$engineType = 5;
 				break;
 			default:
-				$engine_type = "";
+				$engineType = "";
 				break;
 		}
 
-		return $engine_type;
+		return $engineType;
 	}
 
+	/**
+	 * Приводт параметр "кпп" к формату<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $kpp КПП
+	 * @return integer
+	 */
 	protected function formatKpp($kpp)
 	{
 		switch ($kpp)
@@ -544,6 +958,13 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return $kpp;
 	}
 
+	/**
+	 * Приводит параметр "состояние" к формату<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $state Состояние
+	 * @return integer
+	 */
 	protected function formatState($state)
 	{
 		switch ($state)
@@ -571,254 +992,327 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		return $state;
 	}
 
+	/**
+	 * Приводит параметр "тип кузова" к формату<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $body Тип кузова
+	 * @return array mixed
+	 */
 	protected function formatBody($body)
 	{
 		$pattern = "/\b(седан|универсал|пикап|хетчбэк|кабриолет|купе|фургон|внедорожник|лимузин|минивэн|автобус|кроссовер|микроавтобус|лифтбэк|фастбэк)\b/iu";
 		preg_match($pattern, $body, $matches);
 
+		if (!isset($matches[0]))
+			return "";
+		
+		$find = trim(strtolower($matches[0]));
 
-		if (isset($matches[0]))
+		switch (strtolower($find))
 		{
-			$find = trim(strtolower($matches[0]));
-
-			switch (strtolower($find))
-			{
-				case "седан":
-				case "Седан":
-					$body = 1;
-					break;
-				case "Универсал":
-				case "универсал":
-					$body = 2;
-					break;
-				case "пикап":
-					$body = 3;
-					break;
-				case "Хетчбэк":
-				case "хэтчбек":
-				case "хэтчбэк":
-				case "хетчбэк":
-					$body = 4;
-					break;
-				case "Кабриолет":
-				case "кабриолет":
-					$body = 5;
-					break;
-				case "Купе":
-				case "купе":
-					$body = 6;
-					break;
-				case "Фургон":
-				case "фургон":
-					$body = 7;
-					break;
-				case "Внедорожник":
-				case "внедорожник":
-					$body = 8;
-					break;
-				case "Лимузин":
-				case "лимузин":
-					$body = 9;
-					break;
-				case "Минивэн":
-				case "минивэн":
-					$body = 10;
-					break;
-				case "Автобус":
-				case "автобус":
-					$body = 12;
-					break;
-				case "Кроссовер":
-				case "кроссовер":
-					$body = 8;
-					break;
-				case "Микроавтобус":
-				case "микроавтобус":
-					$body = 10;
-					break;
-				case "Лифтбэк":
-				case "лифтбэк":
-					$body = 4;
-					break;
-				case "Фастбэк":
-				case "фастбэк":
-					$body = 4;
-					break;
-				default:
-					$body = "";
-					break;
-			}
-
-			if (isset($this->body_array[$body]))
-				return $body = [
-					"id" => $body,
-					"name" => $this->body_array[$body],
-				];
-		}
-
-		return "";
-	}
-
-	protected function formatCustomHouseState($custom_house_state)
-	{
-		switch ($custom_house_state)
-		{
-			case "растаможен":
-				$custom_house_state = 1;
+			case "седан":
+			case "Седан":
+				$body = 1;
 				break;
-			case "не растаможен":
-				$custom_house_state = 2;
+			case "Универсал":
+			case "универсал":
+				$body = 2;
+				break;
+			case "пикап":
+				$body = 3;
+				break;
+			case "Хетчбэк":
+			case "хэтчбек":
+			case "хэтчбэк":
+			case "хетчбэк":
+				$body = 4;
+				break;
+			case "Кабриолет":
+			case "кабриолет":
+				$body = 5;
+				break;
+			case "Купе":
+			case "купе":
+				$body = 6;
+				break;
+			case "Фургон":
+			case "фургон":
+				$body = 7;
+				break;
+			case "Внедорожник":
+			case "внедорожник":
+				$body = 8;
+				break;
+			case "Лимузин":
+			case "лимузин":
+				$body = 9;
+				break;
+			case "Минивэн":
+			case "минивэн":
+				$body = 10;
+				break;
+			case "Автобус":
+			case "автобус":
+				$body = 12;
+				break;
+			case "Кроссовер":
+			case "кроссовер":
+				$body = 8;
+				break;
+			case "Микроавтобус":
+			case "микроавтобус":
+				$body = 10;
+				break;
+			case "Лифтбэк":
+			case "лифтбэк":
+				$body = 4;
+				break;
+			case "Фастбэк":
+			case "фастбэк":
+				$body = 4;
 				break;
 			default:
-				$custom_house_state = "";
+				$body = "";
 				break;
 		}
 
-		return $custom_house_state;
+		if (isset($this->body_array[$body]))
+			return $body = [
+				"id"	=> $body,
+				"name"	=> $this->body_array[$body],
+			];
 	}
 
-	protected function formatSteeringWheel($steering_wheel)
+	/**
+	 * Приводит параметр "таможня" к виду<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $customHouseState Таможня
+	 * @return integer
+	 */
+	protected function formatCustomHouseState($customHouseState)
+	{
+		switch ($customHouseState)
+		{
+			case "растаможен":
+				$customHouseState = 1;
+				break;
+			case "не растаможен":
+				$customHouseState = 2;
+				break;
+			default:
+				$customHouseState = "";
+				break;
+		}
+
+		return $customHouseState;
+	}
+
+	/**
+	 * Приводит параметр "тип руля" к виду<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param string $steeringWheel Тип руля
+	 * @return integer
+	 */
+	protected function formatSteeringWheel($steeringWheel)
 	{
 		foreach ($this->steering_wheel_array as $key => $item)
 		{
-			$find = preg_match("/\b{$steering_wheel}\b/iu", $item);
+			$pattern = "/\b{$steeringWheel}\b/iu";
 
-			if ($find)
+			if (preg_match($pattern, $item))
 				return $key;
 		}
 	}
 
+	/**
+	 * Приводит параметр "фотография" к виду<br>
+	 * пригодному для сохранения в базе
+	 * 
+	 * @param array $photos Фотография
+	 * @return array mixed
+	 */
 	protected function formatPhoto($photos)
 	{
-		if (!empty($photos))
+		if (empty($photos))
+			return;
+		
+		foreach ($photos as $key => $photo)
 		{
-			foreach ($photos as $key => $photo)
-			{
-				$photoPath = explode("/", $photo);
-				$photoPath = "/files/tmp/" .$photoPath[0] . "/" . $photoPath[1];
+			$photoPath = explode("/", $photo);
+			$photoPath = "/files/tmp/" .$photoPath[0] . "/" . $photoPath[1];
 
-				$photos[$key] = [
-					"src" => $photoPath,
-					"alt" => "",
-				];
-			}
+			$photos[$key] = [
+				"src" => $photoPath,
+				"alt" => "",
+			];
 		}
 
 		return $photos;
 	}
 
+	/**
+	 * Возвращает массив id марок авто
+	 * 
+	 * @param string $brand Название марки из спарсенного объявления
+	 * @return array $foundBrands Массив найденных марок
+	 */
 	protected function compareBrand($brand)
 	{
-		$exceptionBrands = ['ГАЗ'];
+		// исключения
+		$exceptionBrands = [];
 
-		$advert_brand = explode(" ", $brand);
-		if (isset($advert_brand[1]))
-			$advert_brand = $advert_brand[1];
-		else
-			$advert_brand = $advert_brand[0];
+		$brand = explode(" ", $brand);
+		$advertBrand = isset($brand[1]) ? $brand[1] : $brand[0];
 
-		if (in_array($advert_brand, $exceptionBrands))
+		if (in_array($advertBrand, $exceptionBrands))
 			return;
 
-		$brands = $this->brandArray();
+		$ourBrands = self::getBrands();
+		$foundBrands = [];
 
-		foreach ($brands as $brand)
+		foreach ($ourBrands as $ourBrand)
 		{
-			$find = preg_match("/\b{$advert_brand}\b/i", $brand["name"]);
+			$pattern = "/\b{$advertBrand}\b/i";
 
-			if ($find)
-				return $brand["id"];
+			if (preg_match($pattern, $ourBrand["name"]))
+				$foundBrands[] = $ourBrand["id"];
 		}
+		
+		return $foundBrands;
 	}
 
-	protected function compareModel($brand, $model, $body)
+	protected function compareModel(array $brands, $model, $body)
 	{
 		// из объявления
-		$advert_brand = $brand;
-		$advert_model = $model;
+		$advertBrands = $brands;
+		$advertModel = $model;
 
 		// с drivenn
-		$models = $this->modelArray();
+		$ourModels = self::getModels();
 
-		foreach ($models as $model)
+		foreach ($ourModels as $ourModel)
 		{
-			if ($model["brand"] == $advert_brand)
-			{
-				if (isset($this->tableConformity[$advert_brand][$advert_model]))
-					$advert_model = $this->tableConformity[$advert_brand][$advert_model];
+			if ($ourModel["brand"] !== $advertBrands[0] || $ourModel["brand"] !== $advertBrands[1])
+				return "";
+			
+			if (isset($this->tableConformity[$advertBrands[0]][$advertModel]))
+					$advertModel = $this->tableConformity[$advertBrands[0]][$advertModel];
+			else if (isset($this->tableConformity[$advertBrands[1]][$advertModel]))
+				$advertModel = $this->tableConformity[$advertBrands[1]][$advertModel];
+			
+			$patternWithoutBody = "/^{$advertModel}$/iu";
+			
+			if (preg_match($patternWithoutBody, $ourModel["name"]))
+				return $ourModel["id"];
+			
+			$patternWithBody = "/\b{$advertModel}\s+{$body}\b/iu";
 
-				$find_without_body = preg_match("/^{$advert_model}$/iu", $model["name"]);
-
-				if ($find_without_body)
-					return $model["id"];
-
-				$find_with_body = preg_match("/\b{$advert_model}\s+{$body}\b/iu", $model["name"]);
-
-				if ($find_with_body)
-					return $model["id"];
-			}
+			if (preg_match($patternWithBody, $ourModel["name"]))
+				return $ourModel["id"];
 		}
-
-		return "";
 	}
 
-	protected function advertNormalization($advert)
+	/**
+	 * Приводит объявление к нормальному виду,
+	 * который пригоден для записи в бд
+	 * 
+	 * @param array $rawAdvert Необработанное объявление
+	 * @return array $advert
+	 */
+	protected function advertNormalization($rawAdvert)
 	{
 		// Тип кузова
-		if (isset($advert["body"]))
+		if (isset($rawAdvert["body"]))
 		{
-			$advertToSave["body"] = $this->formatBody($advert["body"]);
-			$advertToSave["body_name"] = !empty($advertToSave["body"]["name"]) ? $advertToSave["body"]["name"] : "";
-			$advertToSave["body"] = !empty($advertToSave["body"]["id"]) ? $advertToSave["body"]["id"]: "";
+			$body = $this->formatBody($rawAdvert["body"]);
+			$bodyName = !empty($body["name"]) ? $body["name"] : "";
+			$advert["body"] = !empty($body["id"]) ? $body["id"]: "";
 		}
 		else
-			$advertToSave["body"] = "";
-		// Марка
-		$advertToSave["brand"] = isset($advert["brand"]) ? $this->compareBrand($advert["brand"]) : "";
-		// Модель
-		$advertToSave["model"] = isset($advert["model"]) ? $this->compareModel($advertToSave["brand"], $advert["model"], $advertToSave["body_name"]) : "";
-		// Год
-		$advertToSave["year"] = isset($advert["year"]) ? $advert["year"] : "";
-		// Продавец
-		$advertToSave["seller"] = isset($advert["seller"]) ? $this->formatSeller($advert["seller"]) : "";
-		// Фото
-		$advertToSave["photo"] = isset($advert["images"]) ? $this->formatPhoto($advert["images"]) : "";
-		// Привод
-		$advertToSave["transmission"] = isset($advert["transmission"]) ? $this->formatTransmission($advert["transmission"]) : "";
-		// Руль
-		$advertToSave["steering_wheel"] = isset($advert["steering_wheel"]) ? $this->formatSteeringWheel($advert["steering_wheel"]) : "";
-		// Тип двигателя
-		$advertToSave["engine_type"] = isset($advert["engine_type"]) ? $this->formatEngineType($advert["engine_type"]) : "";
-		// Тип КПП
-		$advertToSave["kpp"] = isset($advert["kpp"]) ? $this->formatKpp($advert["kpp"]) : "";
-		// Объём
-		$advertToSave["engine_volume"] = isset($advert["engine_volume"]) ? $advert["engine_volume"] : "";
-		// Мощность
-		$advertToSave["engine_power"] = isset($advert["engine_power"]) ? $advert["engine_power"] : "";
-		// Цвет
-		$advertToSave["color"] = isset($advert["color"]) ? $this->formatColor($advert["color"]) : "";
-		// Текст объявления
-		$advertToSave["text"] = isset($advert["text"]) ? $advert["text"] : "";
-		// Телефон
-		$advertToSave["phone"] = isset($advert["phone"]) ? $this->formatPhone($advert["phone"]) : "";
-		// Цена
-		$advertToSave["price"] = isset($advert["price"]) ? $this->formatPrice($advert["price"]) : "";
-		// Регион
-		$advertToSave["region"] = isset($advert["region"]) ? $this->formatRegion($advert["region"]) : "";
-		// Место осмотра
-		$advertToSave["inspection_plase"] = isset($advert["inspection_place"]) ? $advert["inspection_place"] : "";
-		// Хозяев в ПТС
-		$advertToSave["owners"] = isset($advert["owners"]) ? $advert["owners"] : "";
-		// Состояние
-		$advertToSave["state"] = isset($advert["state"]) ? $this->formatState($advert["state"]) : "";
-		// Таможка
-		$advertToSave["custom_house_state"] = isset($advert["custom_house_state"]) ? $this->formatCustomHouseState($advert["custom_house_state"]) : "";
-		// VIN
-		$advertToSave["vin"] = isset($advert["vin"]) ? $advert["vin"] : "";
-		// Пробег
-		$advertToSave["distance"] = isset($advert["distance"]) ? $this->formatDistance($advert["distance"]) : "";
+		{
+			$advert["body"] = "";
+			$bodyName = "";
+		}
 
-		return $advertToSave;
+		// Марка
+		$advert["brand"] = isset($rawAdvert["brand"]) ? $this->compareBrand($rawAdvert["brand"]) : "";
+		
+		// Модель
+		$advert["model"] = isset($rawAdvert["model"]) 
+				? $this->compareModel($advert["brand"], $rawAdvert["model"], $bodyName) 
+				: "";
+		
+		// Год
+		$advert["year"] = isset($rawAdvert["year"]) ? $rawAdvert["year"] : "";
+		
+		// Продавец
+		$advert["seller"] = isset($rawAdvert["seller"]) ? $this->formatSeller($rawAdvert["seller"]) : "";
+		
+		// Фото
+		$advert["photo"] = isset($rawAdvert["images"]) ? $this->formatPhoto($rawAdvert["images"]) : "";
+		
+		// Привод
+		$advert["transmission"] = isset($rawAdvert["transmission"]) 
+				? $this->formatTransmission($rawAdvert["transmission"]) 
+				: "";
+		
+		// Руль
+		$advert["steering_wheel"] = isset($rawAdvert["steering_wheel"]) 
+				? $this->formatSteeringWheel($rawAdvert["steering_wheel"]) 
+				: "";
+		
+		// Тип двигателя
+		$advert["engine_type"] = isset($rawAdvert["engine_type"]) 
+				? $this->formatEngineType($rawAdvert["engine_type"]) 
+				: "";
+		
+		// Тип КПП
+		$advert["kpp"] = isset($rawAdvert["kpp"]) ? $this->formatKpp($rawAdvert["kpp"]) : "";
+		
+		// Объём
+		$advert["engine_volume"] = isset($rawAdvert["engine_volume"]) ? $rawAdvert["engine_volume"] : "";
+		
+		// Мощность
+		$advert["engine_power"] = isset($rawAdvert["engine_power"]) ? $rawAdvert["engine_power"] : "";
+		
+		// Цвет
+		$advert["color"] = isset($rawAdvert["color"]) ? $this->formatColor($rawAdvert["color"]) : "";
+		
+		// Текст объявления
+		$advert["text"] = isset($rawAdvert["text"]) ? $rawAdvert["text"] : "";
+		
+		// Телефон
+		$advert["phone"] = isset($rawAdvert["phone"]) ? $this->formatPhone($rawAdvert["phone"]) : "";
+		
+		// Цена
+		$advert["price"] = isset($rawAdvert["price"]) ? $this->formatPrice($rawAdvert["price"]) : "";
+		
+		// Регион
+		$advert["region"] = isset($rawAdvert["region"]) ? $this->formatRegion($rawAdvert["region"]) : "";
+		
+		// Место осмотра
+		$advert["inspection_plase"] = isset($rawAdvert["inspection_place"]) ? $rawAdvert["inspection_place"] : "";
+		
+		// Хозяев в ПТС
+		$advert["owners"] = isset($rawAdvert["owners"]) ? $rawAdvert["owners"] : "";
+		
+		// Состояние
+		$advert["state"] = isset($rawAdvert["state"]) ? $this->formatState($rawAdvert["state"]) : "";
+		
+		// Таможка
+		$advert["custom_house_state"] = isset($rawAdvert["custom_house_state"]) 
+				? $this->formatCustomHouseState($rawAdvert["custom_house_state"]) : "";
+		
+		// VIN
+		$advert["vin"] = isset($rawAdvert["vin"]) ? $rawAdvert["vin"] : "";
+		
+		// Пробег
+		$advert["distance"] = isset($rawAdvert["distance"]) ? $this->formatDistance($rawAdvert["distance"]) : "";
+
+		return $advert;
 	}
 
 	protected function advertSave($advert)
@@ -830,7 +1324,7 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		else
 		{
 			echo $advert->scenario;
-			die('<pre>'.print_r($advert->getErrors(), true).'</pre>');
+			print_r($advert->getErrors(), true);
 		}
 	}
 
@@ -850,13 +1344,25 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		$this->advertSave($advert);
 	}
 
-	protected function advertExists($original_url)
+	/**
+	 * Возвращает объект модели типа Advert
+	 * 
+	 * @param string $originalUrl URL объявления
+	 * @param string $typeAdvert Тип объявления
+	 * @return Advert
+	 */
+	protected function getExistAdvert($originalUrl, $typeAdvert)
 	{
-		$advert = AdvertCar::model()->findByAttributes(['original_url' => $original_url, 'hidden' => 0]);
+		$advert = $typeAdvert::model()->findByAttributes(['original_url' => $originalUrl, 'hidden' => 0]);
 
 		return $advert;
 	}
 
+	/**
+	 * Удаление неактуальных объявлений
+	 * 
+	 * @return boolean
+	 */
 	protected function removeIrrelevantAdverts()
 	{
 		$advertActualUrl = [];
@@ -885,7 +1391,8 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 				echo "{$count} ";
 				echo "Объявление с атрибутом original_url = {$url["original_url"]} не актуально \n";
 				Yii::app()->db->createCommand()
-					->update('advert_car',
+					->update(
+						'advert_car',
 						['hidden' => 1,],
 						'id=:id',
 						[':id'=>$url["id"]]
@@ -894,69 +1401,96 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		}
 	}
 
-	protected function addNewAdvert($advert, $advertUrl, $hash)
+	/**
+	 * Добавляет новое объявление на сайт.<br>
+	 * Если оно проходит валидацию, тогда публикуется<br>
+	 * иначе отправляется на модерацию
+	 * 
+	 * @param array  $advert	Объявление
+	 * @param string $advertUrl Url объявления
+	 * @param string $hash		Хэш
+	 * @return null
+	 */
+	protected function add($advert, $advertUrl, $hash)
 	{
-		if ($this->validateAdvert($advert) == false)
+		$typeAdvert = $this->getAdvertType($advert);
+		
+		// Если объявление валидное и не существует дубликатов
+		if ($this->validateAdvert($advert) == true
+				&& !$this->advertDuplicateExists($advert))
 		{
+			echo 'Спарсенное объявление не найдено в числе собственных объявлений', "\n";
+
+			$model = $this->getExistAdvert($advertUrl, $typeAdvert);
+			
+			if (!empty($model))
+			{
+				echo 'Обновляем объявление т.к. оно уже существует', "\n";
+
+				$model->scenario = 'parsing_advert';
+				$this->advertUpdate($model, $advert);
+			}
+			else
+			{
+				echo 'Записываем новое спарсенное объявление', "\n";
+
+				$model = new $typeAdvert('parsing_advert');
+
+				foreach ($this->savingData as $param)
+				{
+					$model->$param = $advert[$param];
+				}
+
+				$model->original_url = $advertUrl;
+				$model->post_status = 'p';
+
+				$this->advertSave($model);
+			}
+		}
+		else 
+		{
+			// На модерацию даже не отправляем объявления
+			// у которых нет продавца и фотографий
 			if (empty($advert["photo"]) || empty($advert["seller"]))
 				return false;
 
-			if ($model = $this->advertExists($advertUrl))
+			if ($model = $this->getExistAdvert($advertUrl))
 			{
 				$model->scenario = 'parsing_advert_moderation';
 				$this->advertUpdate($model, $advert);
 			}
 			else
 			{
-				$model = new AdvertCar('parsing_advert_moderation');
+				$model = new $typeAdvert('parsing_advert_moderation');
 
 				foreach ($this->savingData as $param)
+				{
 					$model->$param = $advert[$param];
+				}
 
 				$model->original_url = $advertUrl;
 
 				$this->advertSave($model);
 			}
 		}
-		else
-		{
-			if (!$this->advertDuplicateExists($advert))
-			{
-				echo 'Спарсенное объявление не найдено в числе собственных объявлений', "\n";
-
-				if ($model = $this->advertExists($advertUrl))
-				{
-					echo 'Обновляем объявление т.к. оно уже существует', "\n";
-
-					$model->scenario = 'parsing_advert';
-					$this->advertUpdate($model, $advert);
-				}
-				else
-				{
-					echo 'Записываем новое спарсенное объявление', "\n";
-
-					$model = new AdvertCar('parsing_advert');
-
-					foreach ($this->savingData as $param)
-						$model->$param = $advert[$param];
-
-					$model->original_url = $advertUrl;
-					$model->post_status = 'p';
-
-					$this->advertSave($model);
-				}
-			}
-		}
 
 		$mongoData = [
-			"advert_url" => $advertUrl,
-			"advert" => json_encode($advert), 
-			"hash" => $hash, 
-			"status" => "actual"
+			"advert_url"	=> $advertUrl,
+			"advert"		=> json_encode($advert), 
+			"hash"			=> $hash,
+			"type"			=> $advert->getAdvertType($advert),
+			"status"		=> "actual"
 		];
 		$this->_advertsActualCollection->save($mongoData);
 	}
 
+	/**
+	 * Продляет объявление в случае если<br>
+	 * до скрытия осталось меньше недели
+	 * 
+	 * @param string $date Дата
+	 * @return boolean
+	 */
 	protected function deadLine($date)
 	{
 		$endDate = \DateTime::createFromFormat('d.m.Y', $date);
@@ -982,6 +1516,77 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		$this->_advertsActualCollection->update($mongoCriteria, $mongoData, $mongoModificator);
 	}
 
+	protected function update($actualAdvert, $advertUrl, $advertHash)
+	{
+		$model = $this->getModel($actualAdvert, $advertUrl);
+		
+		if ($model->post_status == "p")
+		{
+			if ($this->deadLine($model->obj_show_date) === true)
+			{
+				$model->obj_show_date = date('Y-m-d', strtotime('+30 day'));
+				echo 'Продлеваем объявление id = ', $model->id, "\n";
+			}
+			
+			$model->scenario = 'parsing_advert';
+			$this->advertUpdate($model, $actualAdvert);
+		}
+		
+		$this->updateActualCollection($advertUrl, $advertHash);
+	}
+	
+	protected function save($actualAdvert, $advertUrl)
+	{
+		$model = $this->getModel($actualAdvert, $advertUrl);
+		
+		if ($model->post_status == "p"
+				&& $this->deadLine($model->obj_show_date) === true)
+		{
+			$model->obj_show_date = date('Y-m-d', strtotime('+30 day'));
+
+			echo 'Продлеваем объявление id = ', $model->id, "\n";
+			
+			$model->scenario = 'parsing_advert';
+			$this->advertSave($model);
+		}
+		
+		$this->updateActualCollection($advertUrl);
+	}
+	
+	protected function getModel($actualAdvert, $advertUrl)
+	{
+		$typeAdvert = $this->getAdvertType($actualAdvert);
+		$model = $typeAdvert::model()->findByAttributes(["original_url" => $advertUrl]);
+		
+		return $model;
+	}
+	
+	/**
+	 * Возвращает тип объявления из двух возможных вариантов<br>
+	 * AdvertCar | CommercialCar
+	 * 
+	 * @param array mixed $advert Объявление
+	 * @return string
+	 */
+	protected function getAdvertType($advert)
+	{
+		$brandId = $advert["type"];
+		
+		foreach (self::$brands as $brand)
+		{
+			if ($brand["id"] == $brandId)
+				$typeId = $brand["category"];
+		}
+		
+		if ($typeId == 1)
+			$type = 'AdvertCar';
+		else
+			$type = 'AdvertCommercialCar';
+		
+		return $type;
+	}
+
+
 	public function init()
 	{
 		$mongoConnection = new MongoClient("mongodb://localhost");
@@ -990,7 +1595,13 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 		$this->_advertsActualCollection = new MongoCollection($mongoDb, "drivenn_adverts");
 		$this->_advertsOriginalCollection = new MongoCollection($mongoDb, "am_ru_adverts");
 		
-		$this->_advertsActualCollection->update([], ['$set' => ["status" => "not_actual"]], ["upsert" => false, "multiple" => true]);
+		$this->_advertsActualCollection->update(
+			[], 
+			['$set' => [
+				"status" => "not_actual"]
+			], 
+			["upsert" => false, "multiple" => true]
+		);
 	}
 
 	public function run($args)
@@ -1002,72 +1613,31 @@ class AddParsingAdvertsCommand extends CConsoleCommand
 			if (empty($document["advert"]))
 				continue;
 
-			$advert =  json_decode($document["advert"], true);
-			$advertUrl = $document["advert_url"];
+			$advert     = json_decode($document["advert"], true);
+			$advertUrl  = $document["advert_url"];
 			$advertHash = $document["hash"];
 
 			$actualAdvertCursor = $this->_advertsActualCollection->find(["advert_url" => $advertUrl])->limit(1);
-			$actualAdvert = $actualAdvertCursor->getNext();
+			$actualAdvert = $actualAdvertCursor->current();
 			
-			// если объявление не существует или если существует, но хэши не совпадают
-			if (is_null($actualAdvert) || (isset($actualAdvert["hash"]) && ($actualAdvert["hash"] !== $advertHash)))
+			// Если объявление не существует в базе
+			if (empty($actualAdvert))
 			{
 				$actualAdvert = $this->advertNormalization($advert);
-				$model = AdvertCar::model()->findByAttributes(["original_url" => $advertUrl]);
-
-				if (!$model)
-				{
-					$this->addNewAdvert($actualAdvert, $advertUrl, $advertHash);
-					continue;
-				}
-				
-//				if ($model->post_status == 'h' && $model->hidden == 0)
-//					$model->post_status = 'p';
-				
-				if ($model->post_status == "p")
-				{
-					$model->scenario = 'parsing_advert';
-					$this->advertUpdate($model, $actualAdvert);
-					
-					$this->updateActualCollection($advertUrl, $advertHash);
-				}
-
-				if ($model->post_status == 'm')
-					$this->updateActualCollection($advertUrl, $advertHash);
+				$this->add($actualAdvert, $advertUrl, $advertHash);
 			}
-			// если объявление существует и хеши совпадают
-			else
+			
+			// Если объявление существует, но хэш суммы не совпадают
+			if (!empty($actualAdvert["hash"]) 
+					&& ($actualAdvert["hash"] !== $advertHash))
 			{
-				$model = AdvertCar::model()->findByAttributes(["original_url" => $advertUrl]);
-				
-				if (!$model)
-					continue;
-				
-//				if ($model->post_status == 'h' && $model->hidden == 0)
-//					$model->post_status = 'p';
-				
-				if ($model->post_status == "p")
-				{
-					if ($this->deadLine($model->obj_show_date) === true)
-					{
-						echo $model->obj_show_date, ' - продлеваем', "\n";
-						
-						$model->scenario = 'parsing_advert';
-						$model->obj_show_date = date('Y-m-d', strtotime('+'.self::$oldAdOpenDays.' day'));
-						
-						echo 'Продлеваем объявление id = ', $model->id, "\n";
-						
-						$this->advertSave($model);
-					}
-					
-					$this->updateActualCollection($advertUrl);
-				}
-
-				if ($model->post_status == 'm')
-					$this->updateActualCollection($advertUrl);
+				$this->update($actualAdvert, $advertUrl, $advertHash);
 			}
+			else
+				$this->save($actualAdvert, $advertUrl);
 		}
-
+		
+		// Удаляем неактуальные объявления
 		$this->removeIrrelevantAdverts();
 	}
 
