@@ -29,8 +29,9 @@ logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(a
 client = pymongo.MongoClient("localhost", 27017)
 db = client.adverts
 
-url = "http://nnov.am.ru/all/search/"
-url_page = "http://nnov.am.ru/all/search/?p="
+headers = {'User-Agent': 'Mozilla/4.0 (compatible; MSIE 5.5; Windows NT)'}
+url = urllib2.Request("http://ngr.am.ru/all/search/", None, headers)
+url_page = "http://ngr.am.ru/all/search/?p="
 
 params = {
     u"Состояние": "state",
@@ -85,7 +86,8 @@ def get_count_pages(url):
 
 # Парсит страницу со списком объявлений и сохраняет их url
 def parse_page(url_page):
-    html_doc = urlopen(url_page).read()
+    req = urllib2.Request(url_page, None, headers)
+    html_doc = urlopen(req).read()
     soup = BeautifulSoup(html_doc)
 
     adverts = soup.find_all("div", class_="title")
@@ -128,31 +130,38 @@ def recognition_phone(phone_img_file):
 
 # Скачивает изображение и обрезает на 50 пикселей снизу
 def download_and_crop(image_url, id):
-    img = urlopen(image_url).read()
-    img_dir = "images/"
+    try:
+        req = urllib2.Request(image_url, None, headers)
+        img = urlopen(req).read()
+    except urllib2.HTTPError:
+        logging.error(u"Невозможно загрузить изображение")
+        return False
+    else:
+        img_dir = "images/"
 
-    img_file_name = str(id)+"/"+image_url[-36:]
-    img_file = open(img_dir + img_file_name, "wb")
-    img_file.write(img)
-    img_file.flush()
-    img_file.close()
+        img_file_name = str(id)+"/"+image_url[-36:]
+        img_file = open(img_dir + img_file_name, "wb")
+        img_file.write(img)
+        img_file.flush()
+        img_file.close()
 
-    img_original = Image.open(img_dir + img_file_name)
-    width, height = img_original.size
-    img_crop = img_original.crop([0, 0, width, height - 50])
-    img_crop.save(img_dir + img_file_name, quality=100)
+        img_original = Image.open(img_dir + img_file_name)
+        width, height = img_original.size
+        img_crop = img_original.crop([0, 0, width, height - 50])
+        img_crop.save(img_dir + img_file_name, quality=100)
 
-    return img_file_name
+        return img_file_name
 
 
 def parse_advert_page(advert):
-    url = advert.get("advert_url")
+    advert_url = advert.get("advert_url")
+    url = urllib2.Request(advert_url, None, headers)
     id = advert.get("_id")
 
     # print "========================"
     # print "URL: ", url
     # print "ID: ", id
-    logging.info(u"URL объявления " + url)
+    logging.info(u"URL объявления " + advert_url)
     logging.info(u"ID объявления " + unicode(id))
 
     try:
@@ -182,6 +191,7 @@ def parse_advert_page(advert):
     else:
         if u'Задать вопрос' in advert["seller"]:
             advert["seller"] = advert["seller"][:-14]
+
 
     # не будем парсить объявления с незаполненым полем "Имя владельца"
     if len(advert["seller"]) == 0:
@@ -259,6 +269,8 @@ def parse_advert_page(advert):
                     return False
                 else:
                     image_file = download_and_crop(image_path, id)
+                    if not image_file:
+                        continue
                     images.append(image_file)
                     logging.info(u"Ссылка на изображение" + image_path)
     else:
@@ -296,7 +308,7 @@ def parse_advert_page(advert):
         # Телефон
         phone_tag = soup.find("img", class_="phone-part")
         try:
-            phone = phone_tag.get("src")
+            phone = urllib2.Request(phone_tag.get("src"), None, headers)
         except AttributeError:
             try:
                 phone_tag = soup.find("b", class_="phone-part")
@@ -317,11 +329,9 @@ def parse_advert_page(advert):
                 img_file.close()
                 phone_number = recognition_phone("phone/"+str(id)+".png")
                 advert["phone"] = phone_number
-
         # Текст объявления
-        text_tag = soup.find("div", class_="au-block au-block-0")
         try:
-            text = text_tag.p.string
+            text = soup.find(text=re.compile(u"Дополнительная информация")).parent.parent.parent.p.text
         except AttributeError:
             advert["text"] = ""
         else:
@@ -355,11 +365,8 @@ def parse_advert_page(advert):
                     params_table[key] = value
 
         for key in params_table.keys():
-            try:
-                new_key = params.get(key)
-            except KeyError:
-                continue
-            else:
+            new_key = params.get(key)
+            if new_key is not None:
                 advert[new_key] = params_table[key]
 
         # КПП
@@ -391,34 +398,41 @@ def parse_advert_page(advert):
     #     print "%s => %s" % (key, advert[key])
 
     hash_md5 = hashlib.md5(json.dumps(advert, sort_keys=True)).hexdigest()
-    db.am_ru_adverts.update({"advert_url": url}, {"$set": {"advert": json.dumps(advert), "hash": hash_md5}})
+    db.am_ru_adverts.update({"advert_url": advert_url}, {"$set": {"advert": json.dumps(advert), "hash": hash_md5}})
     logging.info(u"Объявление сохранено")
     print "Сохранено"
 
 
-# удаление изображений
 def remove_all_images():
+    """удаление изображений"""
     if os.path.exists("images/"):
         shutil.rmtree("images/")
+
+
+def remove_all_phone_images():
+    """удаление телефонов, которые хранятся
+       в виде изображений"""
+    if os.path.exists("phone/"):
+        shutil.rmtree("phone/")
 
 
 def main():
     action_type = None
 
-    while action_type != 6:
+    while action_type != 5:
         print "Список действий:"
         print "1 - удалить все имеющиеся объявления и изображения"
         print "2 - поиск всех объялений на сайте"
         print "3 - парсинг всех объявлений"
         print "4 - перенос изображений"
-        print "5 - скопировать базу mongo"
-        print "6 - выход из программы"
+        print "5 - выход из программы"
         action_type = int((raw_input("[]-> ")))
 
         # действие 1
         if action_type == 1:
             db.am_ru_adverts.remove()
             remove_all_images()
+            remove_all_phone_images()
 
         # действие 2
         elif action_type == 2:
@@ -438,6 +452,9 @@ def main():
             if not os.path.exists("images"):
                 os.mkdir("images")
 
+            if not os.path.exists("phone"):
+                os.mkdir("phone")
+
             for advert in db.am_ru_adverts.find():
                 print "Номер объявления: ", counter
                 parse_advert_page(advert)
@@ -454,15 +471,6 @@ def main():
 
             path_to_copy = "tmp"
             copytree("images", path_to_copy)
-
-        # действие 5
-        # подключаемся к удаленной базе и удаляем коллекцию am_ru_adverts
-        remote_client = pymongo.MongoClient("81.18.135.85", 27017)
-        remote_db = remote_client.adverts
-        remote_db.am_ru_adverts.remove()
-        # переносим все данные из локальной базы в удаленную
-        for advert in db.am_ru_adverts.find():
-            remote_db.am_ru_adverts.insert(advert)
 
 
 if __name__ == "__main__":
