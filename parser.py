@@ -416,13 +416,14 @@ def remove_all_phone_images():
 def main():
     action_type = None
 
-    while action_type != 5:
+    while action_type != 6:
         print "Список действий:"
         print "1 - удалить все имеющиеся объявления и изображения"
         print "2 - поиск всех объялений на сайте"
         print "3 - парсинг всех объявлений"
         print "4 - перенос изображений"
-        print "5 - выход из программы"
+        print "5 - перенос бд"
+        print "6 - выход из программы"
         action_type = int((raw_input("[]-> ")))
 
         # действие 1
@@ -469,6 +470,15 @@ def main():
             path_to_copy = "tmp"
             copytree("images", path_to_copy)
 
+        # действие 5
+        elif action_type == 5:
+            # подключаемся к удаленной базе и удаляем коллекцию am_ru_adverts
+            remote_client = pymongo.MongoClient("81.18.135.85", 27017)
+            remote_db = remote_client.adverts
+            remote_db.am_ru_adverts.remove()
+            # переносим все данные из локальной базы в удаленную
+            for advert in db.am_ru_adverts.find():
+                remote_db.am_ru_adverts.insert(advert)
 
 if __name__ == "__main__":
     main()
