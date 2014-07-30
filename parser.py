@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from urllib2 import urlopen
 from PIL import Image
 
+# Установка локали по умолчанию, чтобы не было проблем с коидировкой
 locale.setlocale(locale.LC_ALL, "")
 logfile = "logs/%s_parser.log" % str(time.ctime())
 logging.basicConfig(format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',
@@ -100,16 +101,14 @@ def parse_page(url_page):
 
 def parse_pages(count_pages):
     for i in xrange(0, int(count_pages)):
-        # print "Номер страницы:", i
-        logging.info(u"Номер страницы с объявлениями "  + unicode(i))
+        logging.info(u"Номер страницы с объявлениями " + unicode(i))
         page = url_page + str(i)
-        # print page
         logging.info(u"URL страницы с объявлениями " + page)
         parse_page(page)
 
 
 def filter_string(string):
-    """Фильтрует строки осталвяя только цифры"""
+    """Фильтрует строки оставляя только цифры"""
 
     digit_string = re.compile('[\d]+.?[\d]*')
     found = re.findall(digit_string, string)
@@ -122,8 +121,10 @@ def recognition_phone(phone_img_file):
     tools = pyocr.get_available_tools()
     tool = tools[0]
     langs = tool.get_available_languages()
-    lang = langs[0]
+    lang = langs[1]
     phone_text = tool.image_to_string(Image.open(phone_img_file), lang=lang, builder=pyocr.builders.TextBuilder())
+
+    print phone_text
 
     return phone_text
 
@@ -158,9 +159,6 @@ def parse_advert_page(advert):
     url = urllib2.Request(advert_url, None, headers)
     id = advert.get("_id")
 
-    # print "========================"
-    # print "URL: ", url
-    # print "ID: ", id
     logging.info(u"URL объявления " + advert_url)
     logging.info(u"ID объявления " + unicode(id))
 
@@ -257,7 +255,6 @@ def parse_advert_page(advert):
 
                 new_path = (scheme, netloc, path, query, fragment)
                 image_path = urlunsplit(new_path)
-                # print image_path
 
                 url_image = urlparse(image_path)
                 url_path = url_image.path
