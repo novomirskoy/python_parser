@@ -414,71 +414,49 @@ def remove_all_phone_images():
 
 
 def main():
-    action_type = None
+    db.am_ru_adverts.remove()
+    remove_all_images()
+    remove_all_phone_images()
 
-    while action_type != 6:
-        print "Список действий:"
-        print "1 - удалить все имеющиеся объявления и изображения"
-        print "2 - поиск всех объялений на сайте"
-        print "3 - парсинг всех объявлений"
-        print "4 - перенос изображений"
-        print "5 - перенос бд"
-        print "6 - выход из программы"
-        action_type = int((raw_input("[]-> ")))
+    number_of_pages = get_count_pages(url)
+    print number_of_pages
+    logging.info(u"количество страниц " + unicode(number_of_pages))
 
-        # действие 1
-        if action_type == 1:
-            db.am_ru_adverts.remove()
-            remove_all_images()
-            remove_all_phone_images()
+    parse_pages(number_of_pages)
+    count_adverts = db.am_ru_adverts.find().count()
+    print "Количество объявлений: ", count_adverts
+    logging.info(u"Количество объявлений " + unicode(count_adverts))
 
-        # действие 2
-        elif action_type == 2:
-            number_of_pages = get_count_pages(url)
-            print number_of_pages
-            logging.info(u"количество страниц " + unicode(number_of_pages))
+    counter = 1
 
-            parse_pages(number_of_pages)
-            count_adverts = db.am_ru_adverts.find().count()
-            print "Количество объявлений: ", count_adverts
-            logging.info(u"Количество объявлений " + unicode(count_adverts))
+    if not os.path.exists("images"):
+        os.mkdir("images")
 
-        # действие 3
-        elif action_type == 3:
-            counter = 1
+    if not os.path.exists("phone"):
+        os.mkdir("phone")
 
-            if not os.path.exists("images"):
-                os.mkdir("images")
+    for advert in db.am_ru_adverts.find():
+        print "Номер объявления: ", counter
+        parse_advert_page(advert)
 
-            if not os.path.exists("phone"):
-                os.mkdir("phone")
+        counter += 1
 
-            for advert in db.am_ru_adverts.find():
-                print "Номер объявления: ", counter
-                parse_advert_page(advert)
+    for file_path, dirs, files in os.walk("images"):
+        for dir_name in dirs:
+            os.chmod(os.path.join(file_path, dir_name), 0775)
+        for file_name in files:
+            os.chmod(os.path.join(file_path, file_name), 0775)
 
-                counter += 1
+    path_to_copy = "tmp"
+    copytree("images", path_to_copy)
 
-        # действие 4
-        elif action_type == 4:
-            for file_path, dirs, files in os.walk("images"):
-                for dir_name in dirs:
-                    os.chmod(os.path.join(file_path, dir_name), 0775)
-                for file_name in files:
-                    os.chmod(os.path.join(file_path, file_name), 0775)
-
-            path_to_copy = "tmp"
-            copytree("images", path_to_copy)
-
-        # действие 5
-        elif action_type == 5:
-            # подключаемся к удаленной базе и удаляем коллекцию am_ru_adverts
-            remote_client = pymongo.MongoClient("81.18.135.85", 27017)
-            remote_db = remote_client.adverts
-            remote_db.am_ru_adverts.remove()
-            # переносим все данные из локальной базы в удаленную
-            for advert in db.am_ru_adverts.find():
-                remote_db.am_ru_adverts.insert(advert)
+    # подключаемся к удаленной базе и удаляем коллекцию am_ru_adverts
+    remote_client = pymongo.MongoClient("81.18.135.85", 27017)
+    remote_db = remote_client.adverts
+    remote_db.am_ru_adverts.remove()
+    # переносим все данные из локальной базы в удаленную
+    for advert in db.am_ru_adverts.find():
+        remote_db.am_ru_adverts.insert(advert)
 
 if __name__ == "__main__":
     main()
